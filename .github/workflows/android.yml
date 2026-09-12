@@ -26,10 +26,17 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      # Puts sdkmanager on PATH — it is not there by default on ubuntu-latest.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # The runner image does not ship API 37 yet. Both separator styles are tried
+      # because the new Android CLI takes `platforms/android-37.2` while the older
+      # sdkmanager takes `platforms;android-37.2`.
       - name: Install Android SDK platform 37.2
         run: |
-          sdkmanager "platforms/android-37.2" "build-tools/37.0.0" || \
-          sdkmanager "platforms;android-37.2" "build-tools;37.0.0"
+          sdkmanager "platforms;android-37.2" "build-tools;37.0.0" || \
+          sdkmanager "platforms/android-37.2" "build-tools/37.0.0"
 
       # The anon key is public by design — it ships in the web app's JS bundle and
       # every row it reaches is gated by RLS. It lives in Actions secrets so that
