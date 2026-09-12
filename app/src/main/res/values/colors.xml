@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors OlkPalette in :core:designsystem. Keep the two in step. -->
+    <color name="brand_slate">#0F172A</color>
+    <color name="brand_teal">#14B8A6</color>
+    <color name="brand_cream">#FBF6EC</color>
+</resources>

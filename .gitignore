@@ -1,0 +1,24 @@
+# Build output
+*.iml
+.gradle/
+build/
+/local.properties
+/captures
+.externalNativeBuild
+.cxx
+release/
+
+# Secrets — real values never enter git. secrets.defaults.properties IS committed.
+secrets.properties
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+
+# IDE
+.idea/
+!.idea/icon.png
+.DS_Store
+
+# Kotlin
+.kotlin/

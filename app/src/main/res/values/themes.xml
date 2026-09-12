@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Splash theme. The window background is the brand slate so the very first frame
+      is already OLK rather than a white flash, and postSplashScreenTheme hands off to
+      a bare Material theme once Compose takes over the drawing.
+    -->
+    <style name="Theme.Olk.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_slate</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Olk</item>
+    </style>
+
+    <style name="Theme.Olk" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/brand_slate</item>
+    </style>
+</resources>

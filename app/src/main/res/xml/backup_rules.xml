@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!--
+      The Supabase session is deliberately excluded from backup. A restored refresh
+      token on a different device is a session the user never knowingly created.
+    -->
+    <exclude domain="sharedpref" path="supabase_session.xml" />
+</full-backup-content>
