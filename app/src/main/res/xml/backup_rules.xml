@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below. Android 12+ reads data_extraction_rules.xml instead. -->
 <full-backup-content>
     <!--
-      The Supabase session is deliberately excluded from backup. A restored refresh
-      token on a different device is a session the user never knowingly created.
+      supabase-kt persists the session, refresh token included, in the app's
+      *default* SharedPreferences file, whose name follows the applicationId
+      (`<appId>_preferences.xml`, so it differs between debug and release).
+      Excluding by exact filename breaks silently on any id change, so the whole
+      sharedpref domain is excluded. A refresh token restored onto another device
+      is a session the user never knowingly created there.
     -->
-    <exclude domain="sharedpref" path="supabase_session.xml" />
+    <exclude domain="sharedpref" path="." />
 </full-backup-content>

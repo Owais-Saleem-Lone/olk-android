@@ -18,6 +18,28 @@ object OlkPalette {
 
     val Cream = Color(0xFFFBF6EC)
 
+    /**
+     * Surface-container ramps. Material 3 paints cards, sheets, menus and nav bars
+     * from these five roles; leaving them undefined falls back to Material's stock
+     * purple-tinted greys, which is exactly the lavender that showed up on the first
+     * device run. Light steps are warm paper tones built out from [Cream]; dark
+     * steps are Tailwind's slate scale, the same family the web app uses.
+     */
+    val PaperLowest = Color(0xFFFFFFFF)
+    val PaperLow = Color(0xFFFDFAF4)
+    val Paper = Cream
+    val PaperHigh = Color(0xFFF7F0E2)
+    val PaperHighest = Color(0xFFF2EADA)
+
+    val Slate950 = Color(0xFF020617)
+    val SlateDeep = Color(0xFF0A1122)
+    val Slate750 = Color(0xFF273449)
+
+    /** Tailwind slate-200/400/500, for outlines and dividers. */
+    val Slate200 = Color(0xFFE2E8F0)
+    val Slate400 = Color(0xFF94A3B8)
+    val Slate500 = Color(0xFF64748B)
+
     val White = Color(0xFFFFFFFF)
     val Ink = Color(0xFF171717)
     val NearBlack = Color(0xFF0A0A0A)

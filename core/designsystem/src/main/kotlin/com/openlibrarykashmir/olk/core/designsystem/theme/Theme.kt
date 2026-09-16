@@ -30,6 +30,16 @@ private val LightColors = lightColorScheme(
     onSurface = OlkPalette.Ink,
     surfaceVariant = OlkPalette.Cream,
     onSurfaceVariant = OlkPalette.SlateMuted,
+    surfaceTint = OlkPalette.TealDark,
+
+    surfaceContainerLowest = OlkPalette.PaperLowest,
+    surfaceContainerLow = OlkPalette.PaperLow,
+    surfaceContainer = OlkPalette.Paper,
+    surfaceContainerHigh = OlkPalette.PaperHigh,
+    surfaceContainerHighest = OlkPalette.PaperHighest,
+
+    outline = OlkPalette.Slate400,
+    outlineVariant = OlkPalette.Slate200,
 
     error = OlkPalette.Error,
     onError = OlkPalette.White,
@@ -55,6 +65,16 @@ private val DarkColors = darkColorScheme(
     onSurface = OlkPalette.OffWhite,
     surfaceVariant = OlkPalette.SlateLight,
     onSurfaceVariant = OlkPalette.OffWhite,
+    surfaceTint = OlkPalette.TealLight,
+
+    surfaceContainerLowest = OlkPalette.Slate950,
+    surfaceContainerLow = OlkPalette.SlateDeep,
+    surfaceContainer = OlkPalette.Slate,
+    surfaceContainerHigh = OlkPalette.SlateLight,
+    surfaceContainerHighest = OlkPalette.Slate750,
+
+    outline = OlkPalette.Slate500,
+    outlineVariant = OlkPalette.SlateMuted,
 
     error = OlkPalette.ErrorDark,
     onError = OlkPalette.Slate,
