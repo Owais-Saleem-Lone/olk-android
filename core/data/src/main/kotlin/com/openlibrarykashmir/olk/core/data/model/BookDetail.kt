@@ -60,8 +60,13 @@ sealed interface RequestOutcome {
     data object DailyLimitReached : RequestOutcome
 
     /**
-     * The insert policy refused it: the book stopped being available, was hidden by
-     * an admin, or is the viewer's own. Postgres reports all three identically.
+     * The "Users can create requests" insert policy refused it (SQLSTATE 42501):
+     * the book stopped being available, was hidden by an admin, or belongs to the
+     * viewer. Postgres reports all three identically.
+     *
+     * The own-book check only exists in the database from the web repo's
+     * `block_requesting_own_book` migration onward; before that, only the UI
+     * prevented it (the detail screen never offers Request on your own book).
      */
     data object NoLongerAvailable : RequestOutcome
 }
