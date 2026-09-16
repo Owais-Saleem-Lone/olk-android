@@ -6,7 +6,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.openlibrarykashmir.olk.feature.auth.AuthScreen
+import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
 import kotlinx.serialization.Serializable
 
@@ -20,7 +22,6 @@ data object AuthRoute
 @Serializable
 data object BrowseRoute
 
-/** Placeholder until the detail screen lands; keeps the navigation contract honest. */
 @Serializable
 data class BookDetailRoute(val bookId: String)
 
@@ -43,9 +44,11 @@ fun OlkNavHost(
                 onBookClick = { bookId -> navController.navigate(BookDetailRoute(bookId)) },
             )
         }
-        composable<BookDetailRoute> {
-            // TODO(v1): book detail + request flow.
-            BookDetailPlaceholder()
+        composable<BookDetailRoute> { entry ->
+            BookDetailScreen(
+                bookId = entry.toRoute<BookDetailRoute>().bookId,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }
