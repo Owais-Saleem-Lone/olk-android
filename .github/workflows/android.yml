@@ -27,8 +27,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       # Puts sdkmanager on PATH — it is not there by default on ubuntu-latest.
+      # `packages` is overridden because the default still includes the legacy
+      # `tools` package, which current cmdline-tools no longer provide — asking
+      # for it fails the whole step.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
       # The runner image does not ship API 37 yet. Both separator styles are tried
       # because the new Android CLI takes `platforms/android-37.2` while the older
