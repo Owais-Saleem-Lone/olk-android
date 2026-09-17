@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -29,6 +30,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.openlibrarykashmir.olk.feature.auth.AuthScreen
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
+import com.openlibrarykashmir.olk.feature.messages.ChatScreen
+import com.openlibrarykashmir.olk.feature.messages.MessagesScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksScreen
@@ -53,6 +56,12 @@ data class BookDetailRoute(val bookId: String)
 data object RequestsRoute
 
 @Serializable
+data object MessagesRoute
+
+@Serializable
+data class ChatRoute(val requestId: String)
+
+@Serializable
 data object MyBooksRoute
 
 @Serializable
@@ -66,6 +75,7 @@ private enum class TopLevelTab(
 ) {
     BROWSE(BrowseRoute, BrowseRoute::class, "Browse", Icons.Default.Search),
     REQUESTS(RequestsRoute, RequestsRoute::class, "Requests", Icons.Default.SwapHoriz),
+    MESSAGES(MessagesRoute, MessagesRoute::class, "Messages", Icons.AutoMirrored.Filled.Chat),
     MY_BOOKS(MyBooksRoute, MyBooksRoute::class, "My Books", Icons.AutoMirrored.Filled.LibraryBooks),
 }
 
@@ -135,7 +145,16 @@ fun OlkNavHost(
                 )
             }
             composable<RequestsRoute> {
-                RequestsScreen()
+                RequestsScreen(onMessage = { requestId -> navController.navigate(ChatRoute(requestId)) })
+            }
+            composable<MessagesRoute> {
+                MessagesScreen(onConversationClick = { requestId -> navController.navigate(ChatRoute(requestId)) })
+            }
+            composable<ChatRoute> { entry ->
+                ChatScreen(
+                    requestId = entry.toRoute<ChatRoute>().requestId,
+                    onBack = { navController.popBackStack() },
+                )
             }
             composable<MyBooksRoute> { entry ->
                 val resultMessage by entry.savedStateHandle

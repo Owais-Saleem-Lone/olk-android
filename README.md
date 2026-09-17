@@ -123,7 +123,7 @@ The next build without those variables points back at your usual project.
       covers still happen on the website)
 - [x] Requests — accept, decline, handover, return, finish a donated book
       (reading progress and ratings still on the website)
-- [ ] Messages (Supabase Realtime)
+- [x] Messages — inbox and live chat over Supabase Realtime
 - [ ] Push notifications (FCM)
 
 **Known gaps to close before v1 ships**
@@ -132,9 +132,9 @@ These are places where the web app does something the phone currently cannot:
 
 1. **Some notification emails** still go through a Next.js server action
    (`src/lib/notifications.ts`), which a native client cannot invoke. Book requests
-   are already solved: a database trigger creates the notification and pg_net posts
-   it to the web app for delivery, so the app gets emails for free. Messages, club
-   notifications and wishlist matches still need moving the same way.
+   and chat messages are already solved: database triggers create the notification
+   and pg_net posts it to the web app for delivery, so the app gets emails for free.
+   Club notifications and wishlist matches still need moving the same way.
 2. **Push has no backend.** Needs a `device_tokens` table plus something that calls
    FCM when a notification row is inserted.
 3. **Deep links.** `olk://auth-callback` is wired in the manifest, but the URL must

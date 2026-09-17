@@ -60,6 +60,7 @@ import kotlin.math.abs
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestsScreen(
+    onMessage: (requestId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RequestsViewModel = koinViewModel(),
 ) {
@@ -137,6 +138,7 @@ fun RequestsScreen(
                                 isBusy = state.busyRequestId == item.id,
                                 actionsEnabled = state.busyRequestId == null,
                                 onAction = { action -> viewModel.onAction(item, action) },
+                                onMessage = { onMessage(item.id) },
                             )
                         }
                     }
@@ -173,6 +175,7 @@ private fun RequestCard(
     isBusy: Boolean,
     actionsEnabled: Boolean,
     onAction: (RequestAction) -> Unit,
+    onMessage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -238,7 +241,9 @@ private fun RequestCard(
             }
 
             val actions = actionsFor(item, direction)
-            if (actions.isNotEmpty()) {
+            // Chat is for arranging the exchange, so it is offered while one is under way.
+            val canMessage = item.status == RequestStatus.ACCEPTED || item.status == RequestStatus.HANDED_OVER
+            if (actions.isNotEmpty() || canMessage) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
@@ -262,6 +267,9 @@ private fun RequestCard(
                                 Text(action.label)
                             }
                         }
+                    }
+                    if (canMessage) {
+                        OutlinedButton(onClick = onMessage) { Text("Message") }
                     }
                 }
             }
