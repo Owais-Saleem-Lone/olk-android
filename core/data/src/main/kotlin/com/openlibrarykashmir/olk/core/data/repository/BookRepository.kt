@@ -18,9 +18,6 @@ interface BookRepository {
 
     suspend fun byId(id: String): Book?
 
-    /** Books owned by the signed-in user, whatever their status. */
-    suspend fun myBooks(ownerId: String): List<Book>
-
     companion object {
         const val PAGE_SIZE = 20
     }
@@ -52,13 +49,7 @@ internal class SupabaseBookRepository(
             limit(1)
         }.decodeSingleOrNull()
 
-    override suspend fun myBooks(ownerId: String): List<Book> =
-        client.from(TABLE).select(COLUMNS) {
-            filter { eq("owner_id", ownerId) }
-            order("created_at", Order.DESCENDING)
-        }.decodeList()
-
-    private companion object {
+    internal companion object {
         const val TABLE = "books"
 
         /**
@@ -81,6 +72,7 @@ internal class SupabaseBookRepository(
             "lending_duration_months",
             "read_count",
             "featured",
+            "acquired_via_donation",
             "created_at",
         )
     }

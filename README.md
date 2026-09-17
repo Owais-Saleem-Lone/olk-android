@@ -78,6 +78,21 @@ If Gradle cannot find your SDK, point `local.properties` at it:
 sdk.dir=/path/to/Android/Sdk
 ```
 
+### Against a local Supabase stack
+
+Environment variables override `secrets.properties`, so a debug build can point
+at the web repo's local Docker stack without touching your real values. From the
+emulator, the host machine is `10.0.2.2`; debug builds (only) allow plain HTTP
+to it, see `app/src/debug/res/xml/network_security_config.xml`.
+
+```bash
+SUPABASE_URL=http://10.0.2.2:54321 \
+SUPABASE_ANON_KEY=<anon key from `npx supabase status` in the web repo> \
+./gradlew :app:installDebug
+```
+
+The next build without those variables points back at your usual project.
+
 ### Useful commands
 
 | Command | What it does |
@@ -103,8 +118,9 @@ sdk.dir=/path/to/Android/Sdk
 - [x] Project foundation, build, CI
 - [x] Email/password auth with session persistence
 - [x] Browse with debounced search and pagination
-- [ ] Book detail and the request flow
-- [ ] My books — list, edit, mark given
+- [x] Book detail and the request flow
+- [x] My books — list, edit, mark given, delete (adding books and changing
+      covers still happen on the website)
 - [ ] Incoming requests, handover confirmation
 - [ ] Messages (Supabase Realtime)
 - [ ] Push notifications (FCM)
@@ -113,9 +129,11 @@ sdk.dir=/path/to/Android/Sdk
 
 These are places where the web app does something the phone currently cannot:
 
-1. **Notification emails** go through a Next.js server action (`src/lib/notifications.ts`)
-   calling Resend. A native client cannot invoke a server action, so this needs to
-   move to a Supabase Edge Function or a public API route.
+1. **Some notification emails** still go through a Next.js server action
+   (`src/lib/notifications.ts`), which a native client cannot invoke. Book requests
+   are already solved: a database trigger creates the notification and pg_net posts
+   it to the web app for delivery, so the app gets emails for free. Messages, club
+   notifications and wishlist matches still need moving the same way.
 2. **Push has no backend.** Needs a `device_tokens` table plus something that calls
    FCM when a notification row is inserted.
 3. **Deep links.** `olk://auth-callback` is wired in the manifest, but the URL must

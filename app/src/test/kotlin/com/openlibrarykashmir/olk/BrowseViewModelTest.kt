@@ -42,7 +42,6 @@ class BrowseViewModelTest {
         }
 
         override suspend fun byId(id: String) = null
-        override suspend fun myBooks(ownerId: String) = emptyList<Book>()
     }
 
     @Test

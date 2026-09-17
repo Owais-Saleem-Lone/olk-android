@@ -28,6 +28,8 @@ data class Book(
     @SerialName("lending_duration_months") val lendingDurationMonths: Int? = null,
     @SerialName("read_count") val readCount: Int = 0,
     val featured: Boolean = false,
+    /** A donated book now in permanent circulation: it can be passed on, never deleted. */
+    @SerialName("acquired_via_donation") val acquiredViaDonation: Boolean = false,
     @SerialName("created_at") val createdAt: String? = null,
 )
 

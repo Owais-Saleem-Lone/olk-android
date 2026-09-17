@@ -3,8 +3,10 @@ package com.openlibrarykashmir.olk.core.data
 import com.openlibrarykashmir.olk.core.data.remote.SupabaseClientFactory
 import com.openlibrarykashmir.olk.core.data.repository.BookDetailRepository
 import com.openlibrarykashmir.olk.core.data.repository.BookRepository
+import com.openlibrarykashmir.olk.core.data.repository.MyBooksRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookDetailRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookRepository
+import com.openlibrarykashmir.olk.core.data.repository.SupabaseMyBooksRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
 import com.openlibrarykashmir.olk.core.data.session.SupabaseAuthRepository
 import io.github.jan.supabase.SupabaseClient
@@ -27,4 +29,5 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String) = module {
     single<AuthRepository> { SupabaseAuthRepository(get()) }
     single<BookRepository> { SupabaseBookRepository(get()) }
     single<BookDetailRepository> { SupabaseBookDetailRepository(get(), get()) }
+    single<MyBooksRepository> { SupabaseMyBooksRepository(get()) }
 }
