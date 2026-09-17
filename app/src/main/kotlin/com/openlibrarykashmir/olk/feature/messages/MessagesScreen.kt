@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -37,16 +38,13 @@ import androidx.lifecycle.viewModelScope
 import com.openlibrarykashmir.olk.core.data.repository.Conversation
 import com.openlibrarykashmir.olk.core.data.repository.MessagesRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
+import com.openlibrarykashmir.olk.ui.timeAgo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 data class MessagesUiState(
     val conversations: List<Conversation> = emptyList(),
@@ -86,6 +84,7 @@ class MessagesViewModel(
 @Composable
 fun MessagesScreen(
     onConversationClick: (requestId: String) -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MessagesViewModel = koinViewModel(),
 ) {
@@ -98,7 +97,7 @@ fun MessagesScreen(
 
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Messages") }) },
+        topBar = { TopAppBar(title = { Text("Messages") }, actions = actions) },
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -203,21 +202,5 @@ private fun ConversationRow(conversation: Conversation, viewerId: String?, onCli
                 overflow = TextOverflow.Ellipsis,
             )
         }
-    }
-}
-
-private val SHORT_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM")
-
-/** Same buckets as the web inbox's timeAgo. */
-internal fun timeAgo(createdAt: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): String {
-    val then = parseTimestamp(createdAt)?.toInstant() ?: return ""
-    val minutes = Duration.between(then, now).toMinutes()
-    return when {
-        minutes < 1 -> "just now"
-        minutes < 60 -> "${minutes}m ago"
-        minutes < 60 * 24 -> "${minutes / 60}h ago"
-        minutes < 60 * 48 -> "yesterday"
-        minutes < 60 * 24 * 7 -> "${minutes / (60 * 24)}d ago"
-        else -> then.atZone(zone).format(SHORT_DATE)
     }
 }

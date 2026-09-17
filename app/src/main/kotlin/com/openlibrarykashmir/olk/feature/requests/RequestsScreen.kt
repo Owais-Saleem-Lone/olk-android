@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -61,6 +62,8 @@ import kotlin.math.abs
 @Composable
 fun RequestsScreen(
     onMessage: (requestId: String) -> Unit,
+    messagingEnabled: Boolean = true,
+    actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: RequestsViewModel = koinViewModel(),
 ) {
@@ -79,7 +82,7 @@ fun RequestsScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { TopAppBar(title = { Text("Requests") }) },
+        topBar = { TopAppBar(title = { Text("Requests") }, actions = actions) },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             PrimaryTabRow(selectedTabIndex = state.selected.ordinal) {
@@ -139,6 +142,7 @@ fun RequestsScreen(
                                 actionsEnabled = state.busyRequestId == null,
                                 onAction = { action -> viewModel.onAction(item, action) },
                                 onMessage = { onMessage(item.id) },
+                                messagingEnabled = messagingEnabled,
                             )
                         }
                     }
@@ -176,6 +180,7 @@ private fun RequestCard(
     actionsEnabled: Boolean,
     onAction: (RequestAction) -> Unit,
     onMessage: () -> Unit,
+    messagingEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -242,7 +247,8 @@ private fun RequestCard(
 
             val actions = actionsFor(item, direction)
             // Chat is for arranging the exchange, so it is offered while one is under way.
-            val canMessage = item.status == RequestStatus.ACCEPTED || item.status == RequestStatus.HANDED_OVER
+            val canMessage = messagingEnabled &&
+                (item.status == RequestStatus.ACCEPTED || item.status == RequestStatus.HANDED_OVER)
             if (actions.isNotEmpty() || canMessage) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

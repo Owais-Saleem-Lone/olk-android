@@ -7,6 +7,7 @@ import com.openlibrarykashmir.olk.core.data.repository.ChatMessage
 import com.openlibrarykashmir.olk.core.data.repository.MessagesRepository
 import com.openlibrarykashmir.olk.core.data.repository.SendOutcome
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
+import com.openlibrarykashmir.olk.ui.parseTimestamp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.OffsetDateTime
 
 sealed interface ChatUiState {
     data object Loading : ChatUiState
@@ -155,20 +155,6 @@ internal fun mergeById(existing: List<ChatMessage>, incoming: List<ChatMessage>)
     (existing + incoming).forEach { byId[it.id] = it }
     return byId.values.sortedWith(compareBy({ parseTimestamp(it.createdAt) }, { it.id }))
 }
-
-/**
- * PostgREST returns `2026-09-17T12:50:01.783555+00:00`; Realtime records carry
- * Postgres' text form, `2026-09-17 12:50:01.783555+00`. Accept both.
- */
-fun parseTimestamp(value: String): OffsetDateTime? {
-    val iso = value.trim().replaceFirst(' ', 'T')
-        // A trailing "+00" or "+0530" offset becomes "+00:00" / "+05:30".
-        .replace(TRAILING_SHORT_OFFSET) { m -> "${m.groupValues[1]}:${m.groupValues[2].ifEmpty { "00" }}" }
-    return runCatching { OffsetDateTime.parse(iso) }.getOrNull()
-}
-
-/** An offset without minutes, or without the colon, at the very end of a timestamp. */
-private val TRAILING_SHORT_OFFSET = Regex("(?<=\\d)([+-]\\d{2})(\\d{2})?$")
 
 private fun Throwable.toUserMessage(): String {
     val raw = message.orEmpty().lowercase()

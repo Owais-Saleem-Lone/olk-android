@@ -1,6 +1,7 @@
 package com.openlibrarykashmir.olk.navigation
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -28,6 +30,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.openlibrarykashmir.olk.core.data.repository.FeatureFlags
 import com.openlibrarykashmir.olk.feature.auth.AuthScreen
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
 import com.openlibrarykashmir.olk.feature.messages.ChatScreen
@@ -37,8 +40,13 @@ import com.openlibrarykashmir.olk.feature.mybooks.AddBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksScreen
 import com.openlibrarykashmir.olk.feature.mybooks.ScanIsbnScreen
+import com.openlibrarykashmir.olk.feature.notifications.NotificationBell
+import com.openlibrarykashmir.olk.feature.notifications.NotificationTarget
+import com.openlibrarykashmir.olk.feature.notifications.NotificationsScreen
+import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
 import kotlinx.serialization.Serializable
+import org.koin.androidx.compose.koinViewModel
 import kotlin.reflect.KClass
 
 /**
@@ -75,6 +83,9 @@ data object AddBookRoute
 @Serializable
 data object ScanIsbnRoute
 
+@Serializable
+data object NotificationsRoute
+
 private enum class TopLevelTab(
     val route: Any,
     val routeClass: KClass<*>,
@@ -85,6 +96,38 @@ private enum class TopLevelTab(
     REQUESTS(RequestsRoute, RequestsRoute::class, "Requests", Icons.Default.SwapHoriz),
     MESSAGES(MessagesRoute, MessagesRoute::class, "Messages", Icons.AutoMirrored.Filled.Chat),
     MY_BOOKS(MyBooksRoute, MyBooksRoute::class, "My Books", Icons.AutoMirrored.Filled.LibraryBooks),
+    ;
+
+    /** Whether an admin has this feature switched on; see `platform_settings`. */
+    fun isEnabled(flags: FeatureFlags) = this != MESSAGES || flags.messages
+}
+
+/**
+ * Opens what a notification points at. A tab target goes through the same
+ * single-top/restore-state navigation as tapping the tab itself, so following a
+ * notification never stacks a second copy of Browse or Requests.
+ *
+ * The targets that go nowhere ([NotificationTarget.None], `WebsiteOnly`,
+ * `MessagingOff`) are handled on the screen, where there is a snackbar to say so.
+ */
+private fun NavHostController.openNotificationTarget(target: NotificationTarget) {
+    when (target) {
+        is NotificationTarget.Book -> navigate(BookDetailRoute(target.bookId))
+        is NotificationTarget.Chat -> navigate(ChatRoute(target.requestId))
+        NotificationTarget.Requests -> navigateToTab(RequestsRoute)
+        NotificationTarget.Messages -> navigateToTab(MessagesRoute)
+        NotificationTarget.MyBooks -> navigateToTab(MyBooksRoute)
+        NotificationTarget.None,
+        NotificationTarget.WebsiteOnly,
+        NotificationTarget.MessagingOff,
+        -> Unit
+    }
+}
+
+private fun NavHostController.navigateToTab(route: Any) = navigate(route) {
+    popUpTo(graph.findStartDestination().id) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
 }
 
 /** Key under which the edit screen hands its result message back to My Books. */
@@ -96,13 +139,35 @@ private const val SCANNED_ISBN_KEY = "scanned_isbn"
 @Composable
 fun OlkNavHost(
     isSignedIn: Boolean,
+    featureFlags: FeatureFlags,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
+    // Deliberately every tab, not only the enabled ones: switching Messages off
+    // while someone is on that screen should not leave them with no navigation.
     val showBottomBar = isSignedIn &&
         TopLevelTab.entries.any { tab -> destination?.hasRoute(tab.routeClass) == true }
+
+    // One shared instance for the whole app: the bell in each top bar and the
+    // notifications screen itself must agree on what has been read. Resolved
+    // here, outside any `composable {}`, so the owner is the activity rather
+    // than a single back-stack entry.
+    val notificationsViewModel: NotificationsViewModel = koinViewModel()
+    val notificationsState by notificationsViewModel.uiState.collectAsStateWithLifecycle()
+
+    LifecycleStartEffect(isSignedIn, notificationsViewModel) {
+        if (isSignedIn) notificationsViewModel.start()
+        onStopOrDispose { notificationsViewModel.stop() }
+    }
+
+    val bell: @Composable RowScope.() -> Unit = {
+        NotificationBell(
+            unreadCount = notificationsState.unreadCount,
+            onClick = { navController.navigate(NotificationsRoute) },
+        )
+    }
 
     Scaffold(
         modifier = modifier,
@@ -112,7 +177,7 @@ fun OlkNavHost(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {
-                    TopLevelTab.entries.forEach { tab ->
+                    TopLevelTab.entries.filter { it.isEnabled(featureFlags) }.forEach { tab ->
                         NavigationBarItem(
                             selected = destination?.hierarchy?.any { it.hasRoute(tab.routeClass) } == true,
                             onClick = {
@@ -147,6 +212,7 @@ fun OlkNavHost(
             composable<BrowseRoute> {
                 BrowseScreen(
                     onBookClick = { bookId -> navController.navigate(BookDetailRoute(bookId)) },
+                    actions = bell,
                 )
             }
             composable<BookDetailRoute> { entry ->
@@ -156,10 +222,25 @@ fun OlkNavHost(
                 )
             }
             composable<RequestsRoute> {
-                RequestsScreen(onMessage = { requestId -> navController.navigate(ChatRoute(requestId)) })
+                RequestsScreen(
+                    onMessage = { requestId -> navController.navigate(ChatRoute(requestId)) },
+                    messagingEnabled = featureFlags.messages,
+                    actions = bell,
+                )
             }
             composable<MessagesRoute> {
-                MessagesScreen(onConversationClick = { requestId -> navController.navigate(ChatRoute(requestId)) })
+                MessagesScreen(
+                    onConversationClick = { requestId -> navController.navigate(ChatRoute(requestId)) },
+                    actions = bell,
+                )
+            }
+            composable<NotificationsRoute> {
+                NotificationsScreen(
+                    viewModel = notificationsViewModel,
+                    messagingEnabled = featureFlags.messages,
+                    onOpen = { target -> navController.openNotificationTarget(target) },
+                    onBack = { navController.popBackStack() },
+                )
             }
             composable<ChatRoute> { entry ->
                 ChatScreen(
@@ -176,6 +257,7 @@ fun OlkNavHost(
                     onAddBook = { navController.navigate(AddBookRoute) },
                     resultMessage = resultMessage,
                     onResultMessageShown = { entry.savedStateHandle[RESULT_MESSAGE_KEY] = null },
+                    actions = bell,
                 )
             }
             composable<AddBookRoute> { entry ->

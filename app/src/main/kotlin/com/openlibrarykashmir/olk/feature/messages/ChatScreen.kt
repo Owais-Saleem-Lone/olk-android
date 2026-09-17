@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openlibrarykashmir.olk.core.data.repository.ChatMessage
 import com.openlibrarykashmir.olk.core.data.repository.MessagesRepository
+import com.openlibrarykashmir.olk.ui.parseTimestamp
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import java.time.LocalDate

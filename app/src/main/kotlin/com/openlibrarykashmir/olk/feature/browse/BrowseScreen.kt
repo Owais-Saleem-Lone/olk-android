@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -49,6 +50,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun BrowseScreen(
     onBookClick: (String) -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: BrowseViewModel = koinViewModel(),
 ) {
@@ -71,7 +73,7 @@ fun BrowseScreen(
 
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Browse") }) },
+        topBar = { TopAppBar(title = { Text("Browse") }, actions = actions) },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             OutlinedTextField(

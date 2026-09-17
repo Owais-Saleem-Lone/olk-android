@@ -11,6 +11,7 @@ import com.openlibrarykashmir.olk.feature.mybooks.CoverUploader
 import com.openlibrarykashmir.olk.feature.mybooks.DeviceCoverUploader
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookViewModel
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksViewModel
+import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
 import com.openlibrarykashmir.olk.feature.requests.RequestsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
@@ -18,13 +19,14 @@ import org.koin.dsl.module
 
 val appModule = module {
     single<CoverUploader> { DeviceCoverUploader(androidContext(), get()) }
-    viewModel { MainViewModel(get()) }
+    viewModel { MainViewModel(get(), get()) }
     viewModel { AuthViewModel(get()) }
     viewModel { BrowseViewModel(get()) }
     viewModel { (bookId: String) -> BookDetailViewModel(bookId, get(), get()) }
     viewModel { MyBooksViewModel(get(), get()) }
     viewModel { RequestsViewModel(get(), get()) }
     viewModel { MessagesViewModel(get(), get()) }
+    viewModel { NotificationsViewModel(get(), get()) }
     viewModel { (requestId: String) -> ChatViewModel(requestId, get(), get()) }
     viewModel { (bookId: String) -> EditBookViewModel(bookId, get(), get(), get(), get()) }
     viewModel { AddBookViewModel(get(), get(), get(), get()) }

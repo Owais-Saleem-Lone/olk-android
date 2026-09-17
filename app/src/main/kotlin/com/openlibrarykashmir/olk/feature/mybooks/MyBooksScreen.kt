@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -64,6 +65,7 @@ fun MyBooksScreen(
     onAddBook: () -> Unit,
     resultMessage: String?,
     onResultMessageShown: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MyBooksViewModel = koinViewModel(),
 ) {
@@ -100,6 +102,7 @@ fun MyBooksScreen(
             TopAppBar(
                 title = { Text("My Books") },
                 actions = {
+                    actions()
                     Box {
                         IconButton(onClick = { menuOpen = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More options")

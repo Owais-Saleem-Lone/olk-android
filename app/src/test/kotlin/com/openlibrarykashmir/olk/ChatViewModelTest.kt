@@ -12,8 +12,8 @@ import com.openlibrarykashmir.olk.core.data.session.AuthState
 import com.openlibrarykashmir.olk.feature.messages.ChatUiState
 import com.openlibrarykashmir.olk.feature.messages.ChatViewModel
 import com.openlibrarykashmir.olk.feature.messages.mergeById
-import com.openlibrarykashmir.olk.feature.messages.parseTimestamp
-import com.openlibrarykashmir.olk.feature.messages.timeAgo
+import com.openlibrarykashmir.olk.ui.parseTimestamp
+import com.openlibrarykashmir.olk.ui.timeAgo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
