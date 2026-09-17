@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Camera captures land here before compression; cleared after each upload. -->
+    <cache-path name="covers" path="covers/" />
+</paths>

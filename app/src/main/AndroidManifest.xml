@@ -49,6 +49,22 @@
                     android:host="auth-callback" />
             </intent-filter>
         </activity>
+
+        <!--
+          Lets the system camera app write a cover photo into our cache
+          (cover_paths.xml). No CAMERA permission is declared on purpose: the photo
+          is taken by the camera app via ACTION_IMAGE_CAPTURE, which needs none
+          as long as this app does not request the permission itself.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.covers"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/cover_paths" />
+        </provider>
     </application>
 
 </manifest>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
@@ -22,6 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +61,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun MyBooksScreen(
     onBookClick: (String) -> Unit,
+    onAddBook: () -> Unit,
     resultMessage: String?,
     onResultMessageShown: () -> Unit,
     modifier: Modifier = Modifier,
@@ -86,6 +89,13 @@ fun MyBooksScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAddBook,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("Add book") },
+            )
+        },
         topBar = {
             TopAppBar(
                 title = { Text("My Books") },
@@ -119,11 +129,12 @@ fun MyBooksScreen(
                 )
 
                 state.books.isEmpty() -> CenteredMessage(
-                    text = "You haven't listed any books yet.\nAdd books on the website for now.",
+                    text = "You haven't listed any books yet.\nTap Add book to share your first one.",
                 )
 
                 else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
+                    // Extra bottom space so the Add book button never covers the last card.
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(state.books, key = { it.id }) { book ->

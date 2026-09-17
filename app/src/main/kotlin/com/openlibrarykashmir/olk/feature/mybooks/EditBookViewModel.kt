@@ -27,6 +27,7 @@ data class BookForm(
     val status: BookStatus,
     val genre: String,
     val lendingDurationMonths: Int,
+    val cover: CoverChoice = CoverChoice.Current(null),
 ) {
     val titleError: String?
         get() = when {
@@ -50,6 +51,7 @@ data class BookForm(
             status = book.status,
             genre = book.genre ?: DEFAULT_GENRE,
             lendingDurationMonths = book.lendingDurationMonths ?: LENDING_PERIODS.first(),
+            cover = CoverChoice.Current(book.coverUrl),
         )
     }
 }
@@ -91,6 +93,7 @@ class EditBookViewModel(
     private val books: BookRepository,
     private val repository: MyBooksRepository,
     private val auth: AuthRepository,
+    private val uploader: CoverUploader,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EditBookUiState>(EditBookUiState.Loading)
@@ -138,17 +141,19 @@ class EditBookViewModel(
             return
         }
 
-        val edit = BookEdit(
-            title = form.title.trim(),
-            author = form.author.trim().ifEmpty { null },
-            status = form.status,
-            genre = form.genre,
-            lendingDurationMonths = form.lendingDurationMonths.takeIf { state.book.listingType == ListingType.LEND },
-        )
-
         viewModelScope.launch {
             updateEditing { it.copy(isSaving = true) }
-            runCatching { repository.update(bookId, edit) }
+            runCatching {
+                val edit = BookEdit(
+                    title = form.title.trim(),
+                    author = form.author.trim().ifEmpty { null },
+                    status = form.status,
+                    genre = form.genre,
+                    lendingDurationMonths = form.lendingDurationMonths.takeIf { state.book.listingType == ListingType.LEND },
+                    coverUrl = form.cover.resolve(state.book.ownerId, uploader),
+                )
+                repository.update(bookId, edit)
+            }
                 .onSuccess { saved ->
                     if (saved == null) {
                         _uiState.value = EditBookUiState.NotFound
@@ -156,7 +161,7 @@ class EditBookViewModel(
                         _events.send(EditBookEvent.Done("Changes saved"))
                     }
                 }
-                .onFailure { _events.send(EditBookEvent.Message(it.toUserMessage())) }
+                .onFailure { _events.send(EditBookEvent.Message(it.toCoverAwareMessage())) }
             updateEditing { it.copy(isSaving = false) }
         }
     }

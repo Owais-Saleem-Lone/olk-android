@@ -33,6 +33,7 @@ import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
 import com.openlibrarykashmir.olk.feature.messages.ChatScreen
 import com.openlibrarykashmir.olk.feature.messages.MessagesScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
+import com.openlibrarykashmir.olk.feature.mybooks.AddBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
@@ -66,6 +67,9 @@ data object MyBooksRoute
 
 @Serializable
 data class EditBookRoute(val bookId: String)
+
+@Serializable
+data object AddBookRoute
 
 private enum class TopLevelTab(
     val route: Any,
@@ -162,8 +166,18 @@ fun OlkNavHost(
                     .collectAsStateWithLifecycle()
                 MyBooksScreen(
                     onBookClick = { bookId -> navController.navigate(EditBookRoute(bookId)) },
+                    onAddBook = { navController.navigate(AddBookRoute) },
                     resultMessage = resultMessage,
                     onResultMessageShown = { entry.savedStateHandle[RESULT_MESSAGE_KEY] = null },
+                )
+            }
+            composable<AddBookRoute> {
+                AddBookScreen(
+                    onBack = { navController.popBackStack() },
+                    onDone = { message ->
+                        navController.previousBackStackEntry?.savedStateHandle?.set(RESULT_MESSAGE_KEY, message)
+                        navController.popBackStack()
+                    },
                 )
             }
             composable<EditBookRoute> { entry ->

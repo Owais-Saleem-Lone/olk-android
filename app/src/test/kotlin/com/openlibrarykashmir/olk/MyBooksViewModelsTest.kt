@@ -2,14 +2,19 @@ package com.openlibrarykashmir.olk
 
 import app.cash.turbine.test
 import com.openlibrarykashmir.olk.core.data.model.Book
+import com.openlibrarykashmir.olk.core.data.model.BookCondition
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
 import com.openlibrarykashmir.olk.core.data.model.ListingType
+import com.openlibrarykashmir.olk.core.data.repository.AddBookOutcome
 import com.openlibrarykashmir.olk.core.data.repository.BookEdit
 import com.openlibrarykashmir.olk.core.data.repository.BookRepository
 import com.openlibrarykashmir.olk.core.data.repository.DeleteOutcome
 import com.openlibrarykashmir.olk.core.data.repository.MyBooksRepository
+import com.openlibrarykashmir.olk.core.data.repository.NewBook
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthState
+import com.openlibrarykashmir.olk.feature.mybooks.AddBookViewModel
+import com.openlibrarykashmir.olk.feature.mybooks.CoverUploader
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookEvent
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookUiState
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookViewModel
@@ -87,6 +92,17 @@ class MyBooksViewModelsTest {
         }
 
         override suspend fun genres() = listOf("General", "Fiction")
+
+        val added = mutableListOf<NewBook>()
+        var addOutcome: AddBookOutcome = AddBookOutcome.Added("new-id")
+
+        override suspend fun add(ownerId: String, book: NewBook): AddBookOutcome {
+            failWith?.let { throw it }
+            added += book
+            return addOutcome
+        }
+
+        override suspend fun uploadCover(ownerId: String, webpBytes: ByteArray) = "https://covers/$ownerId.webp"
     }
 
     @Test
@@ -109,7 +125,7 @@ class MyBooksViewModelsTest {
 
     @Test
     fun `edit form starts from the saved book and keeps a deactivated genre selectable`() = runTest {
-        val viewModel = EditBookViewModel("b1", FakeBooks(book()), FakeMyBooks(), FakeAuth(ME))
+        val viewModel = EditBookViewModel("b1", FakeBooks(book()), FakeMyBooks(), FakeAuth(ME), NO_UPLOAD)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as EditBookUiState.Editing
@@ -121,7 +137,7 @@ class MyBooksViewModelsTest {
 
     @Test
     fun `someone else's book is reported as not found rather than editable`() = runTest {
-        val viewModel = EditBookViewModel("b1", FakeBooks(book(ownerId = "someone-else")), FakeMyBooks(), FakeAuth(ME))
+        val viewModel = EditBookViewModel("b1", FakeBooks(book(ownerId = "someone-else")), FakeMyBooks(), FakeAuth(ME), NO_UPLOAD)
         advanceUntilIdle()
 
         assertEquals(EditBookUiState.NotFound, viewModel.uiState.value)
@@ -130,7 +146,7 @@ class MyBooksViewModelsTest {
     @Test
     fun `blank title is caught before any request is made`() = runTest {
         val repo = FakeMyBooks(books = listOf(book()))
-        val viewModel = EditBookViewModel("b1", FakeBooks(book()), repo, FakeAuth(ME))
+        val viewModel = EditBookViewModel("b1", FakeBooks(book()), repo, FakeAuth(ME), NO_UPLOAD)
         advanceUntilIdle()
 
         viewModel.onFormChange { it.copy(title = "   ") }
@@ -144,7 +160,7 @@ class MyBooksViewModelsTest {
     @Test
     fun `saving trims fields, clears a blank author and marks the book given`() = runTest {
         val repo = FakeMyBooks(books = listOf(book()))
-        val viewModel = EditBookViewModel("b1", FakeBooks(book()), repo, FakeAuth(ME))
+        val viewModel = EditBookViewModel("b1", FakeBooks(book()), repo, FakeAuth(ME), NO_UPLOAD)
         advanceUntilIdle()
 
         viewModel.events.test {
@@ -155,7 +171,7 @@ class MyBooksViewModelsTest {
             assertEquals(EditBookEvent.Done("Changes saved"), awaitItem())
         }
         assertEquals(
-            BookEdit(title = "New Title", author = null, status = BookStatus.GIVEN, genre = "Poetry", lendingDurationMonths = 2),
+            BookEdit(title = "New Title", author = null, status = BookStatus.GIVEN, genre = "Poetry", lendingDurationMonths = 2, coverUrl = null),
             repo.lastEdit,
         )
     }
@@ -164,7 +180,7 @@ class MyBooksViewModelsTest {
     fun `a donation never sends a lending period`() = runTest {
         val donation = book(listingType = ListingType.DONATE)
         val repo = FakeMyBooks(books = listOf(donation))
-        val viewModel = EditBookViewModel("b1", FakeBooks(donation), repo, FakeAuth(ME))
+        val viewModel = EditBookViewModel("b1", FakeBooks(donation), repo, FakeAuth(ME), NO_UPLOAD)
         advanceUntilIdle()
 
         viewModel.save()
@@ -177,7 +193,7 @@ class MyBooksViewModelsTest {
     fun `a book in circulation cannot be deleted from the app`() = runTest {
         val circulating = book(acquiredViaDonation = true)
         val repo = FakeMyBooks(books = listOf(circulating))
-        val viewModel = EditBookViewModel("b1", FakeBooks(circulating), repo, FakeAuth(ME))
+        val viewModel = EditBookViewModel("b1", FakeBooks(circulating), repo, FakeAuth(ME), NO_UPLOAD)
         advanceUntilIdle()
 
         assertFalse((viewModel.uiState.value as EditBookUiState.Editing).canDelete)
@@ -190,7 +206,7 @@ class MyBooksViewModelsTest {
     @Test
     fun `a delete the database refuses keeps the user on the form with a message`() = runTest {
         val repo = FakeMyBooks(books = listOf(book()), deleteOutcome = DeleteOutcome.NotAllowed)
-        val viewModel = EditBookViewModel("b1", FakeBooks(book()), repo, FakeAuth(ME))
+        val viewModel = EditBookViewModel("b1", FakeBooks(book()), repo, FakeAuth(ME), NO_UPLOAD)
         advanceUntilIdle()
 
         viewModel.events.test {
@@ -202,7 +218,102 @@ class MyBooksViewModelsTest {
         assertFalse((viewModel.uiState.value as EditBookUiState.Editing).isDeleting)
     }
 
+    @Test
+    fun `edit keeps the existing cover without uploading anything`() = runTest {
+        val withCover = book().copy(coverUrl = "https://covers/existing.webp")
+        val repo = FakeMyBooks(books = listOf(withCover))
+        val viewModel = EditBookViewModel("b1", FakeBooks(withCover), repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertEquals("https://covers/existing.webp", repo.lastEdit?.coverUrl)
+    }
+
+    @Test
+    fun `add book sends trimmed fields, and a lending period only for lends`() = runTest {
+        val repo = FakeMyBooks()
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        viewModel.events.test {
+            viewModel.onFormChange {
+                it.copy(
+                    title = "  Curfewed Night ",
+                    author = " ",
+                    publicationYear = "2008",
+                    description = "  Memoir  ",
+                    condition = BookCondition.FAIR,
+                    listingType = ListingType.LEND,
+                    lendingDurationMonths = 2,
+                )
+            }
+            viewModel.save()
+            advanceUntilIdle()
+            assertEquals(EditBookEvent.Done("Book added"), awaitItem())
+        }
+        assertEquals(
+            NewBook(
+                title = "Curfewed Night",
+                author = null,
+                condition = BookCondition.FAIR,
+                listingType = ListingType.LEND,
+                genre = "General",
+                description = "Memoir",
+                publicationYear = 2008,
+                lendingDurationMonths = 2,
+                coverUrl = null,
+            ),
+            repo.added.single(),
+        )
+
+        viewModel.onFormChange { it.copy(listingType = ListingType.DONATE) }
+        viewModel.save()
+        advanceUntilIdle()
+        assertNull(repo.added.last().lendingDurationMonths)
+    }
+
+    @Test
+    fun `add book checks title and year before calling the database`() = runTest {
+        val repo = FakeMyBooks()
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        viewModel.onFormChange { it.copy(title = "  ", publicationYear = "999") }
+        viewModel.save()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.showErrors)
+        assertEquals("Title is required", state.form.titleError)
+        assertEquals("Enter a year between 1000 and 2200", state.form.yearError)
+        assertTrue(repo.added.isEmpty())
+    }
+
+    @Test
+    fun `the daily listing limit is explained and the form is kept`() = runTest {
+        val repo = FakeMyBooks().apply { addOutcome = AddBookOutcome.DailyLimitReached }
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        viewModel.events.test {
+            viewModel.onFormChange { it.copy(title = "One Too Many") }
+            viewModel.save()
+            advanceUntilIdle()
+            assertEquals(
+                EditBookEvent.Message("You've reached today's limit for new books. Try again tomorrow."),
+                awaitItem(),
+            )
+        }
+        assertEquals("One Too Many", viewModel.uiState.value.form.title)
+        assertFalse(viewModel.uiState.value.isSaving)
+    }
+
     private companion object {
         const val ME = "me"
+
+        /** These tests never pick a photo; an upload attempt would be a bug. */
+        val NO_UPLOAD = CoverUploader { _, _ -> error("unexpected upload") }
     }
 }

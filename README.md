@@ -119,8 +119,8 @@ The next build without those variables points back at your usual project.
 - [x] Email/password auth with session persistence
 - [x] Browse with debounced search and pagination
 - [x] Book detail and the request flow
-- [x] My books — list, edit, mark given, delete (adding books and changing
-      covers still happen on the website)
+- [x] My books — add (with a cover from the gallery or camera), list, edit,
+      change cover, mark given, delete
 - [x] Requests — accept, decline, handover, return, finish a donated book
       (reading progress and ratings still on the website)
 - [x] Messages — inbox and live chat over Supabase Realtime
@@ -130,11 +130,11 @@ The next build without those variables points back at your usual project.
 
 These are places where the web app does something the phone currently cannot:
 
-1. **Some notification emails** still go through a Next.js server action
-   (`src/lib/notifications.ts`), which a native client cannot invoke. Book requests
-   and chat messages are already solved: database triggers create the notification
-   and pg_net posts it to the web app for delivery, so the app gets emails for free.
-   Club notifications and wishlist matches still need moving the same way.
+1. **Club notification emails** still go through a Next.js server action
+   (`src/lib/notifications.ts`), which a native client cannot invoke. Book requests,
+   chat messages and wishlist matches are already solved: database triggers create
+   the notification and pg_net posts it to the web app for delivery, so the app gets
+   emails for free. Clubs need moving the same way before they reach the app.
 2. **Push has no backend.** Needs a `device_tokens` table plus something that calls
    FCM when a notification row is inserted.
 3. **Deep links.** `olk://auth-callback` is wired in the manifest, but the URL must
@@ -146,7 +146,7 @@ These are places where the web app does something the phone currently cannot:
 - Offline cache (Room) — matters more here than in most apps, given network
   conditions in the region
 - Clubs and events
-- Camera capture and ISBN scanning when listing a book
+- ISBN scanning when listing a book (the website has it)
 - F-Droid release alongside Play
 
 ## Contributing
