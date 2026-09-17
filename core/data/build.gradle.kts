@@ -40,6 +40,8 @@ dependencies {
     api(libs.supabase.realtime)
     api(libs.supabase.storage)
     implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
 
     implementation(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.serialization.json)
@@ -50,6 +52,7 @@ dependencies {
     api(libs.koin.core)
 
     testImplementation(libs.junit)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
 }

@@ -36,6 +36,7 @@ import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
 import com.openlibrarykashmir.olk.feature.mybooks.AddBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksScreen
+import com.openlibrarykashmir.olk.feature.mybooks.ScanIsbnScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
@@ -71,6 +72,9 @@ data class EditBookRoute(val bookId: String)
 @Serializable
 data object AddBookRoute
 
+@Serializable
+data object ScanIsbnRoute
+
 private enum class TopLevelTab(
     val route: Any,
     val routeClass: KClass<*>,
@@ -85,6 +89,9 @@ private enum class TopLevelTab(
 
 /** Key under which the edit screen hands its result message back to My Books. */
 private const val RESULT_MESSAGE_KEY = "result_message"
+
+/** Key under which the scanner hands an ISBN back to the Add book form. */
+private const val SCANNED_ISBN_KEY = "scanned_isbn"
 
 @Composable
 fun OlkNavHost(
@@ -171,11 +178,26 @@ fun OlkNavHost(
                     onResultMessageShown = { entry.savedStateHandle[RESULT_MESSAGE_KEY] = null },
                 )
             }
-            composable<AddBookRoute> {
+            composable<AddBookRoute> { entry ->
+                val scannedIsbn by entry.savedStateHandle
+                    .getStateFlow<String?>(SCANNED_ISBN_KEY, null)
+                    .collectAsStateWithLifecycle()
                 AddBookScreen(
                     onBack = { navController.popBackStack() },
+                    onScanIsbn = { navController.navigate(ScanIsbnRoute) },
+                    scannedIsbn = scannedIsbn,
+                    onScannedIsbnUsed = { entry.savedStateHandle[SCANNED_ISBN_KEY] = null },
                     onDone = { message ->
                         navController.previousBackStackEntry?.savedStateHandle?.set(RESULT_MESSAGE_KEY, message)
+                        navController.popBackStack()
+                    },
+                )
+            }
+            composable<ScanIsbnRoute> {
+                ScanIsbnScreen(
+                    onBack = { navController.popBackStack() },
+                    onIsbn = { isbn ->
+                        navController.previousBackStackEntry?.savedStateHandle?.set(SCANNED_ISBN_KEY, isbn)
                         navController.popBackStack()
                     },
                 )

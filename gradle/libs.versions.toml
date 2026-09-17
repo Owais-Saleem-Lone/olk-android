@@ -42,6 +42,8 @@ koin = "4.2.2"
 
 # Images
 coil = "3.6.2"
+cameraX = "1.6.2"
+zxing = "3.5.4"
 
 # Test
 junit = "4.13.2"
@@ -77,6 +79,9 @@ supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgre
 supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime-kt" }
 supabase-storage = { group = "io.github.jan-tennert.supabase", name = "storage-kt" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
 
 # --- DI (versions come from the BOM) ---
 koin-bom = { group = "io.insert-koin", name = "koin-bom", version.ref = "koin" }
@@ -86,6 +91,12 @@ koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compos
 
 # --- Images ---
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+# CameraX for the viewfinder + ZXing's plain decoder for the barcode itself.
+# Deliberately not ML Kit: that would pull in Google Play services.
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraX" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraX" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # --- Test ---

@@ -1,5 +1,6 @@
 package com.openlibrarykashmir.olk.feature.mybooks
 
+import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -44,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import coil3.compose.AsyncImage
 
 /** What the cover will be once the form is saved. */
@@ -82,6 +84,18 @@ fun CoverPicker(
         val target = pendingCapture
         if (saved && target != null) onChoice(CoverChoice.Picked(target))
         pendingCapture = null
+    }
+
+    fun capture() {
+        val target = CoverImage.newCaptureTarget(context)
+        pendingCapture = target
+        takePhoto.launch(target)
+    }
+
+    // The app declares CAMERA for the ISBN scanner, and once it is declared the
+    // system camera app refuses ACTION_IMAGE_CAPTURE until it is granted.
+    val requestCamera = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) capture()
     }
 
     val preview: Any? = when (choice) {
@@ -125,9 +139,13 @@ fun CoverPicker(
             if (hasCamera) {
                 OutlinedButton(
                     onClick = {
-                        val target = CoverImage.newCaptureTarget(context)
-                        pendingCapture = target
-                        takePhoto.launch(target)
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                            PackageManager.PERMISSION_GRANTED
+                        ) {
+                            capture()
+                        } else {
+                            requestCamera.launch(Manifest.permission.CAMERA)
+                        }
                     },
                     enabled = enabled,
                 ) {

@@ -9,6 +9,7 @@ import com.openlibrarykashmir.olk.core.data.repository.AddBookOutcome
 import com.openlibrarykashmir.olk.core.data.repository.BookEdit
 import com.openlibrarykashmir.olk.core.data.repository.BookRepository
 import com.openlibrarykashmir.olk.core.data.repository.DeleteOutcome
+import com.openlibrarykashmir.olk.core.data.repository.IsbnLookupRepository
 import com.openlibrarykashmir.olk.core.data.repository.MyBooksRepository
 import com.openlibrarykashmir.olk.core.data.repository.NewBook
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
@@ -234,7 +235,7 @@ class MyBooksViewModelsTest {
     @Test
     fun `add book sends trimmed fields, and a lending period only for lends`() = runTest {
         val repo = FakeMyBooks()
-        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD)
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD, NO_LOOKUP)
         advanceUntilIdle()
 
         viewModel.events.test {
@@ -277,7 +278,7 @@ class MyBooksViewModelsTest {
     @Test
     fun `add book checks title and year before calling the database`() = runTest {
         val repo = FakeMyBooks()
-        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD)
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD, NO_LOOKUP)
         advanceUntilIdle()
 
         viewModel.onFormChange { it.copy(title = "  ", publicationYear = "999") }
@@ -294,7 +295,7 @@ class MyBooksViewModelsTest {
     @Test
     fun `the daily listing limit is explained and the form is kept`() = runTest {
         val repo = FakeMyBooks().apply { addOutcome = AddBookOutcome.DailyLimitReached }
-        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD)
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD, NO_LOOKUP)
         advanceUntilIdle()
 
         viewModel.events.test {
@@ -315,5 +316,10 @@ class MyBooksViewModelsTest {
 
         /** These tests never pick a photo; an upload attempt would be a bug. */
         val NO_UPLOAD = CoverUploader { _, _ -> error("unexpected upload") }
+
+        /** ISBN lookup has its own tests in :core:data; nothing here scans. */
+        val NO_LOOKUP = object : IsbnLookupRepository {
+            override suspend fun lookup(isbn: String) = error("unexpected lookup")
+        }
     }
 }

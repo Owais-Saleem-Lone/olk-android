@@ -5,6 +5,15 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!--
+      For the ISBN scanner's viewfinder, and (because declaring it makes the system
+      camera app require it) for taking a cover photo. Both ask at the moment the
+      user taps the button. `required=false` keeps the app installable on devices
+      without a camera, where both features fall back to typing.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
+    <!--
       Declared now because minSdk is 26 and FCM lands in v1. On Android 13+ this is a
       runtime permission the app must ask for; the prompt goes in with the push work,
       not before — asking for notifications on first launch, before the user knows

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.openlibrarykashmir.olk.core.data.model.BookCondition
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import com.openlibrarykashmir.olk.core.data.repository.AddBookOutcome
+import com.openlibrarykashmir.olk.core.data.repository.IsbnLookupRepository
 import com.openlibrarykashmir.olk.core.data.repository.MyBooksRepository
 import com.openlibrarykashmir.olk.core.data.repository.NewBook
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
@@ -70,6 +71,7 @@ data class AddBookUiState(
     val form: NewBookForm = NewBookForm(),
     val genres: List<String> = emptyList(),
     val isSaving: Boolean = false,
+    val isLookingUp: Boolean = false,
     val showErrors: Boolean = false,
 ) {
     /** A category that is not (or no longer) active still shows if selected. */
@@ -81,6 +83,7 @@ class AddBookViewModel(
     private val repository: MyBooksRepository,
     private val auth: AuthRepository,
     private val uploader: CoverUploader,
+    private val isbnLookup: IsbnLookupRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddBookUiState())
@@ -97,6 +100,45 @@ class AddBookViewModel(
 
     fun onFormChange(transform: (NewBookForm) -> NewBookForm) =
         _uiState.update { it.copy(form = transform(it.form)) }
+
+    /**
+     * Fills the form from Open Library. Only empty fields are filled, so a scan
+     * after typing never wipes what the user wrote; the cover is only set when
+     * they have not chosen a photo.
+     */
+    fun applyIsbn(isbn: String) {
+        if (_uiState.value.isLookingUp) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLookingUp = true) }
+            runCatching { isbnLookup.lookup(isbn) }
+                .onSuccess { found ->
+                    if (found == null) {
+                        _events.send(EditBookEvent.Message("No book found for that ISBN. Fill the details in yourself."))
+                    } else {
+                        _uiState.update { state ->
+                            val form = state.form
+                            state.copy(
+                                form = form.copy(
+                                    title = form.title.ifBlank { found.title },
+                                    author = form.author.ifBlank { found.author.orEmpty() },
+                                    genre = if (form.genre == BookForm.DEFAULT_GENRE) found.genre ?: form.genre else form.genre,
+                                    publicationYear = form.publicationYear.ifBlank { found.publicationYear?.toString().orEmpty() },
+                                    description = form.description.ifBlank { found.description.orEmpty() },
+                                    cover = if (form.cover == CoverChoice.Current(null) && found.coverUrl != null) {
+                                        CoverChoice.Current(found.coverUrl)
+                                    } else {
+                                        form.cover
+                                    },
+                                ),
+                            )
+                        }
+                        _events.send(EditBookEvent.Message("Found \"${found.title}\". Check the details before adding."))
+                    }
+                }
+                .onFailure { _events.send(EditBookEvent.Message("Couldn't reach Open Library. Fill the details in yourself.")) }
+            _uiState.update { it.copy(isLookingUp = false) }
+        }
+    }
 
     fun save() {
         val state = _uiState.value

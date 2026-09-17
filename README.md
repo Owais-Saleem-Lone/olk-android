@@ -50,7 +50,8 @@ rewriting the app. That option stays open only while the boundary holds, and
 boundaries that are not enforced do not hold.
 
 **Stack:** Kotlin 2.4.20 · Compose (BOM 2026.09.00) · Material 3 · Navigation Compose
-(type-safe routes) · Koin · supabase-kt 3.8.0 · Ktor · Coil 3 · AGP 9.4 / Gradle 9.7.1.
+(type-safe routes) · Koin · supabase-kt 3.8.0 · Ktor · Coil 3 · CameraX + ZXing
+(barcode scanning, deliberately not ML Kit — no Play services) · AGP 9.4 / Gradle 9.7.1.
 
 Koin rather than Hilt: no annotation processing, so builds stay fast, and it is
 KMP-native like everything else in `:core:data`.
@@ -119,8 +120,8 @@ The next build without those variables points back at your usual project.
 - [x] Email/password auth with session persistence
 - [x] Browse with debounced search and pagination
 - [x] Book detail and the request flow
-- [x] My books — add (with a cover from the gallery or camera), list, edit,
-      change cover, mark given, delete
+- [x] My books — add (ISBN scan or manual entry, cover from the gallery or
+      camera), list, edit, change cover, mark given, delete
 - [x] Requests — accept, decline, handover, return, finish a donated book
       (reading progress and ratings still on the website)
 - [x] Messages — inbox and live chat over Supabase Realtime
@@ -146,7 +147,6 @@ These are places where the web app does something the phone currently cannot:
 - Offline cache (Room) — matters more here than in most apps, given network
   conditions in the region
 - Clubs and events
-- ISBN scanning when listing a book (the website has it)
 - F-Droid release alongside Play
 
 ## Contributing
