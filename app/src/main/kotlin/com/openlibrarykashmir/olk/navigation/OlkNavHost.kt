@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,6 +32,7 @@ import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksScreen
+import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
@@ -48,6 +50,9 @@ data object BrowseRoute
 data class BookDetailRoute(val bookId: String)
 
 @Serializable
+data object RequestsRoute
+
+@Serializable
 data object MyBooksRoute
 
 @Serializable
@@ -60,6 +65,7 @@ private enum class TopLevelTab(
     val icon: ImageVector,
 ) {
     BROWSE(BrowseRoute, BrowseRoute::class, "Browse", Icons.Default.Search),
+    REQUESTS(RequestsRoute, RequestsRoute::class, "Requests", Icons.Default.SwapHoriz),
     MY_BOOKS(MyBooksRoute, MyBooksRoute::class, "My Books", Icons.AutoMirrored.Filled.LibraryBooks),
 }
 
@@ -127,6 +133,9 @@ fun OlkNavHost(
                     bookId = entry.toRoute<BookDetailRoute>().bookId,
                     onBack = { navController.popBackStack() },
                 )
+            }
+            composable<RequestsRoute> {
+                RequestsScreen()
             }
             composable<MyBooksRoute> { entry ->
                 val resultMessage by entry.savedStateHandle

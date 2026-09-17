@@ -121,7 +121,8 @@ The next build without those variables points back at your usual project.
 - [x] Book detail and the request flow
 - [x] My books — list, edit, mark given, delete (adding books and changing
       covers still happen on the website)
-- [ ] Incoming requests, handover confirmation
+- [x] Requests — accept, decline, handover, return, finish a donated book
+      (reading progress and ratings still on the website)
 - [ ] Messages (Supabase Realtime)
 - [ ] Push notifications (FCM)
 
