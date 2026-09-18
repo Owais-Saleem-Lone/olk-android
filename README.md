@@ -119,6 +119,7 @@ The next build without those variables points back at your usual project.
 - [x] Project foundation, build, CI
 - [x] Email/password auth with session persistence
 - [x] Browse with debounced search and pagination
+- [x] Browse filters: genre, giving away / lending, condition, area, distance (measured in the database from your own saved location; the app never sends coordinates)
 - [x] Book detail and the request flow
 - [x] My books — add (ISBN scan or manual entry, cover from the gallery or
       camera), list, edit, change cover, mark given, delete
@@ -129,7 +130,7 @@ The next build without those variables points back at your usual project.
       feature switches (e.g. messaging off) respected
 - [x] Profile — name, area, bio, approximate location for "books near me", weekly
       digest, suspension notice, sign out
-- [ ] Browse filters, saved books and wishlist, public profiles and ratings
+- [ ] Saved books and wishlist, public profiles and ratings
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**

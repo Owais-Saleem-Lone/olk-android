@@ -12,7 +12,6 @@ import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
 import io.ktor.http.ContentType
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -150,11 +149,7 @@ internal class SupabaseMyBooksRepository(
         return if (deleted.isEmpty()) DeleteOutcome.NotAllowed else DeleteOutcome.Deleted
     }
 
-    override suspend fun genres(): List<String> =
-        client.from("genres").select(Columns.list("name")) {
-            filter { eq("active", true) }
-            order("display_order", Order.ASCENDING)
-        }.decodeList<GenreRow>().map { it.name }
+    override suspend fun genres(): List<String> = client.activeGenres()
 
     override suspend fun uploadCover(ownerId: String, webpBytes: ByteArray): String {
         // Same `<userId>/<timestamp>.<ext>` layout the web form uses.
@@ -172,6 +167,3 @@ internal class SupabaseMyBooksRepository(
         const val COVERS_BUCKET = "book-covers"
     }
 }
-
-@Serializable
-private data class GenreRow(val name: String)

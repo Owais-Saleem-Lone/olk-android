@@ -2,6 +2,8 @@ package com.openlibrarykashmir.olk
 
 import app.cash.turbine.test
 import com.openlibrarykashmir.olk.core.data.model.Book
+import com.openlibrarykashmir.olk.core.data.model.BrowseBook
+import com.openlibrarykashmir.olk.core.data.model.BrowseFilters
 import com.openlibrarykashmir.olk.core.data.model.BookCondition
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
 import com.openlibrarykashmir.olk.core.data.model.ListingType
@@ -64,8 +66,10 @@ class MyBooksViewModelsTest {
     }
 
     private class FakeBooks(private val book: Book?) : BookRepository {
-        override suspend fun browse(limit: Int, offset: Int, query: String?) = emptyList<Book>()
+        override suspend fun browse(filters: BrowseFilters, limit: Int, offset: Int) = emptyList<BrowseBook>()
         override suspend fun byId(id: String) = book
+        override suspend fun genres() = emptyList<String>()
+        override suspend fun hasSavedLocation() = false
     }
 
     private class FakeMyBooks(

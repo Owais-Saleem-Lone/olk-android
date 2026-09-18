@@ -167,6 +167,7 @@ fun GenreField(
     options: List<String>,
     enabled: Boolean,
     onSelect: (String) -> Unit,
+    label: String = "Category",
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -179,7 +180,7 @@ fun GenreField(
             onValueChange = {},
             readOnly = true,
             enabled = enabled,
-            label = { Text("Category") },
+            label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
