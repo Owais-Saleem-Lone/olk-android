@@ -125,7 +125,12 @@ The next build without those variables points back at your usual project.
 - [x] Requests — accept, decline, handover, return, finish a donated book
       (reading progress and ratings still on the website)
 - [x] Messages — inbox and live chat over Supabase Realtime
-- [ ] Push notifications (FCM)
+- [x] Notifications — list and unread badge, live over Supabase Realtime; admin
+      feature switches (e.g. messaging off) respected
+- [x] Profile — name, area, bio, approximate location for "books near me", weekly
+      digest, suspension notice, sign out
+- [ ] Browse filters, saved books and wishlist, public profiles and ratings
+- [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**
 
@@ -138,9 +143,6 @@ These are places where the web app does something the phone currently cannot:
    emails for free. Clubs need moving the same way before they reach the app.
 2. **Push has no backend.** Needs a `device_tokens` table plus something that calls
    FCM when a notification row is inserted.
-3. **Deep links.** `olk://auth-callback` is wired in the manifest, but the URL must
-   be added to the Supabase dashboard's redirect allow-list or confirmation links
-   fail silently.
 
 **Later**
 

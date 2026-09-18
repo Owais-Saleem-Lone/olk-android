@@ -10,7 +10,9 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -44,6 +46,7 @@ import com.openlibrarykashmir.olk.feature.notifications.NotificationBell
 import com.openlibrarykashmir.olk.feature.notifications.NotificationTarget
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsScreen
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
+import com.openlibrarykashmir.olk.feature.profile.ProfileScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
@@ -85,6 +88,9 @@ data object ScanIsbnRoute
 
 @Serializable
 data object NotificationsRoute
+
+@Serializable
+data object ProfileRoute
 
 private enum class TopLevelTab(
     val route: Any,
@@ -162,11 +168,15 @@ fun OlkNavHost(
         onStopOrDispose { notificationsViewModel.stop() }
     }
 
+    // Every top-level screen's top bar: notifications, then your profile.
     val bell: @Composable RowScope.() -> Unit = {
         NotificationBell(
             unreadCount = notificationsState.unreadCount,
             onClick = { navController.navigate(NotificationsRoute) },
         )
+        IconButton(onClick = { navController.navigate(ProfileRoute) }) {
+            Icon(Icons.Outlined.AccountCircle, contentDescription = "Your profile")
+        }
     }
 
     Scaffold(
@@ -233,6 +243,9 @@ fun OlkNavHost(
                     onConversationClick = { requestId -> navController.navigate(ChatRoute(requestId)) },
                     actions = bell,
                 )
+            }
+            composable<ProfileRoute> {
+                ProfileScreen(onBack = { navController.popBackStack() })
             }
             composable<NotificationsRoute> {
                 NotificationsScreen(

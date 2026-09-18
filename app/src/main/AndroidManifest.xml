@@ -14,6 +14,15 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <!--
+      Approximate location only, asked for when the user taps "Share my location"
+      on their profile: "books near me" needs a neighbourhood, never a house.
+      Fine location is deliberately not declared. `required=false` so devices
+      without location hardware can still install the app.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
+    <!--
       Declared now because minSdk is 26 and FCM lands in v1. On Android 13+ this is a
       runtime permission the app must ask for; the prompt goes in with the push work,
       not before — asking for notifications on first launch, before the user knows

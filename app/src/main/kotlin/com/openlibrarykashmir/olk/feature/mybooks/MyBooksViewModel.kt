@@ -45,10 +45,6 @@ class MyBooksViewModel(
                 }
         }
     }
-
-    fun signOut() {
-        viewModelScope.launch { runCatching { auth.signOut() } }
-    }
 }
 
 private fun Throwable.toUserMessage(): String {
