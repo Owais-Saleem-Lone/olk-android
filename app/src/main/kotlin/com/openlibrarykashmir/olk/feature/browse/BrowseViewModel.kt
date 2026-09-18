@@ -32,19 +32,21 @@ data class BrowseUiState(
 @OptIn(FlowPreview::class)
 class BrowseViewModel(
     private val bookRepository: BookRepository,
+    /** What was typed into Home's search box, if Browse was opened from there. */
+    initialQuery: String = "",
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BrowseUiState())
+    private val _uiState = MutableStateFlow(BrowseUiState(filters = BrowseFilters(query = initialQuery)))
     val uiState: StateFlow<BrowseUiState> = _uiState.asStateFlow()
 
-    private val queryFlow = MutableStateFlow("")
+    private val queryFlow = MutableStateFlow(initialQuery)
 
     // A newer load (new search or filters) cancels the one in flight, and any page
     // being appended, so a slow earlier response can never replace newer results.
     private var loadJob: Job? = null
 
     init {
-        // First page loads immediately; `drop(1)` skips queryFlow's initial "" so the
+        // First page loads immediately; `drop(1)` skips queryFlow's initial value so the
         // cold start does not sit behind the search debounce.
         load()
         refreshLocation()

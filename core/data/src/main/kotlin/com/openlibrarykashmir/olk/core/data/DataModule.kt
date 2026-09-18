@@ -5,6 +5,7 @@ import com.openlibrarykashmir.olk.core.data.repository.BookDetailRepository
 import com.openlibrarykashmir.olk.core.data.repository.BookRepository
 import com.openlibrarykashmir.olk.core.data.repository.IsbnLookupRepository
 import com.openlibrarykashmir.olk.core.data.repository.MessagesRepository
+import com.openlibrarykashmir.olk.core.data.repository.HomeRepository
 import com.openlibrarykashmir.olk.core.data.repository.ListsRepository
 import com.openlibrarykashmir.olk.core.data.repository.MyBooksRepository
 import com.openlibrarykashmir.olk.core.data.repository.NotificationsRepository
@@ -15,6 +16,7 @@ import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookDetailReposit
 import com.openlibrarykashmir.olk.core.data.repository.OpenLibraryIsbnRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseMessagesRepository
+import com.openlibrarykashmir.olk.core.data.repository.SupabaseHomeRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseListsRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseMyBooksRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseNotificationsRepository
@@ -56,6 +58,7 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String) = module {
     single<PlatformSettingsRepository> { SupabasePlatformSettingsRepository(get()) }
     single<ProfileRepository> { SupabaseProfileRepository(get()) }
     single<ListsRepository> { SupabaseListsRepository(get()) }
+    single<HomeRepository> { SupabaseHomeRepository(get()) }
 
     // Open Library (ISBN lookup) is the only call that does not go to Supabase.
     single {

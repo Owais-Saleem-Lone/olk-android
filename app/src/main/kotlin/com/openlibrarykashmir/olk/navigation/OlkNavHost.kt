@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material3.Icon
@@ -38,6 +38,7 @@ import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
 import com.openlibrarykashmir.olk.feature.messages.ChatScreen
 import com.openlibrarykashmir.olk.feature.messages.MessagesScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
+import com.openlibrarykashmir.olk.feature.home.HomeScreen
 import com.openlibrarykashmir.olk.feature.mybooks.AddBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksScreen
@@ -60,7 +61,11 @@ import kotlin.reflect.KClass
 data object AuthRoute
 
 @Serializable
-data object BrowseRoute
+data object HomeRoute
+
+/** Search results; [query] is what was typed into Home's search box, if anything. */
+@Serializable
+data class BrowseRoute(val query: String = "")
 
 @Serializable
 data class BookDetailRoute(val bookId: String)
@@ -98,7 +103,7 @@ private enum class TopLevelTab(
     val label: String,
     val icon: ImageVector,
 ) {
-    BROWSE(BrowseRoute, BrowseRoute::class, "Browse", Icons.Default.Search),
+    HOME(HomeRoute, HomeRoute::class, "Home", Icons.Default.Home),
     REQUESTS(RequestsRoute, RequestsRoute::class, "Requests", Icons.Default.SwapHoriz),
     MESSAGES(MessagesRoute, MessagesRoute::class, "Messages", Icons.AutoMirrored.Filled.Chat),
     MY_BOOKS(MyBooksRoute, MyBooksRoute::class, "My Books", Icons.AutoMirrored.Filled.LibraryBooks),
@@ -213,16 +218,26 @@ fun OlkNavHost(
 
         NavHost(
             navController = navController,
-            startDestination = if (isSignedIn) BrowseRoute else AuthRoute,
+            startDestination = if (isSignedIn) HomeRoute else AuthRoute,
             modifier = Modifier.padding(bottom).consumeWindowInsets(bottom),
         ) {
             composable<AuthRoute> {
                 AuthScreen()
             }
-            composable<BrowseRoute> {
+            composable<HomeRoute> {
+                HomeScreen(
+                    onSearch = { query -> navController.navigate(BrowseRoute(query)) },
+                    onBookClick = { bookId -> navController.navigate(BookDetailRoute(bookId)) },
+                    // Same as the website's button, which goes to My Books.
+                    onStartSharing = { navController.navigateToTab(MyBooksRoute) },
+                    actions = bell,
+                )
+            }
+            composable<BrowseRoute> { entry ->
                 BrowseScreen(
                     onBookClick = { bookId -> navController.navigate(BookDetailRoute(bookId)) },
-                    actions = bell,
+                    onBack = { navController.popBackStack() },
+                    initialQuery = entry.toRoute<BrowseRoute>().query,
                 )
             }
             composable<BookDetailRoute> { entry ->

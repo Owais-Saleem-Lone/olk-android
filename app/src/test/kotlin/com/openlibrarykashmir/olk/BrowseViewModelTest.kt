@@ -258,4 +258,16 @@ class BrowseViewModelTest {
         assertEquals("~15 km", formatDistance(13.0))
         assertEquals("~20 km", formatDistance(19.6))
     }
+
+    @Test
+    fun `opened from Home's search box, the first load already uses that query`() = runTest {
+        val repo = FakeBookRepository(pages = listOf(listOf(book("a"))))
+        val viewModel = BrowseViewModel(repo, initialQuery = "rumi")
+        advanceUntilIdle()
+
+        assertEquals("rumi", viewModel.uiState.value.filters.query)
+        assertEquals("rumi", repo.lastQuery)
+        // Straight away, not after the debounce, and only once.
+        assertEquals(1, repo.callCount)
+    }
 }

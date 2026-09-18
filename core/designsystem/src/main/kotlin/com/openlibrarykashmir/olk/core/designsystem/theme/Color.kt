@@ -45,6 +45,19 @@ object OlkPalette {
     val NearBlack = Color(0xFF0A0A0A)
     val OffWhite = Color(0xFFEDEDED)
 
+    /**
+     * The website homepage's accents (Tailwind teal/amber/rose): stats, the
+     * "how it works" steps, Lend badges and the teal-to-amber call to action.
+     */
+    val Teal50 = Color(0xFFF0FDFA)
+    val Teal600 = TealDark
+    val Amber50 = Color(0xFFFFFBEB)
+    val Amber400 = Color(0xFFFBBF24)
+    val Amber600 = Color(0xFFD97706)
+    val Rose50 = Color(0xFFFFF1F2)
+    val Rose400 = Color(0xFFFB7185)
+    val Rose500 = Color(0xFFF43F5E)
+
     /** Error ramp — Material's default red, tuned to sit beside the teal. */
     val Error = Color(0xFFBA1A1A)
     val ErrorDark = Color(0xFFFFB4AB)

@@ -4,6 +4,7 @@ import com.openlibrarykashmir.olk.MainViewModel
 import com.openlibrarykashmir.olk.feature.auth.AuthViewModel
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailViewModel
 import com.openlibrarykashmir.olk.feature.browse.BrowseViewModel
+import com.openlibrarykashmir.olk.feature.home.HomeViewModel
 import com.openlibrarykashmir.olk.feature.lists.SavedViewModel
 import com.openlibrarykashmir.olk.feature.lists.WishlistViewModel
 import com.openlibrarykashmir.olk.feature.messages.ChatViewModel
@@ -27,7 +28,8 @@ val appModule = module {
     single<Locator> { DeviceLocator(androidContext()) }
     viewModel { MainViewModel(get(), get()) }
     viewModel { AuthViewModel(get()) }
-    viewModel { BrowseViewModel(get()) }
+    viewModel { HomeViewModel(get()) }
+    viewModel { (query: String) -> BrowseViewModel(get(), query) }
     viewModel { (bookId: String) -> BookDetailViewModel(bookId, get(), get()) }
     viewModel { MyBooksViewModel(get(), get()) }
     viewModel { RequestsViewModel(get(), get()) }

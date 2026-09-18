@@ -118,6 +118,7 @@ The next build without those variables points back at your usual project.
 
 - [x] Project foundation, build, CI
 - [x] Email/password auth with session persistence
+- [x] Home (the website homepage: announcements, stats, Book of the Month, recently added, live activity) as the first tab; Browse opens from its search
 - [x] Browse with debounced search and pagination
 - [x] Browse filters: genre, giving away / lending, condition, area, distance (measured in the database from your own saved location; the app never sends coordinates)
 - [x] Book detail and the request flow
