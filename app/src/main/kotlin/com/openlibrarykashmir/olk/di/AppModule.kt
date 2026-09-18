@@ -4,6 +4,8 @@ import com.openlibrarykashmir.olk.MainViewModel
 import com.openlibrarykashmir.olk.feature.auth.AuthViewModel
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailViewModel
 import com.openlibrarykashmir.olk.feature.browse.BrowseViewModel
+import com.openlibrarykashmir.olk.feature.lists.SavedViewModel
+import com.openlibrarykashmir.olk.feature.lists.WishlistViewModel
 import com.openlibrarykashmir.olk.feature.messages.ChatViewModel
 import com.openlibrarykashmir.olk.feature.messages.MessagesViewModel
 import com.openlibrarykashmir.olk.feature.mybooks.AddBookViewModel
@@ -35,4 +37,6 @@ val appModule = module {
     viewModel { (requestId: String) -> ChatViewModel(requestId, get(), get()) }
     viewModel { (bookId: String) -> EditBookViewModel(bookId, get(), get(), get(), get()) }
     viewModel { AddBookViewModel(get(), get(), get(), get()) }
+    viewModel { SavedViewModel(get(), get()) }
+    viewModel { WishlistViewModel(get(), get()) }
 }

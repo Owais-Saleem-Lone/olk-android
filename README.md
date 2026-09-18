@@ -130,7 +130,8 @@ The next build without those variables points back at your usual project.
       feature switches (e.g. messaging off) respected
 - [x] Profile — name, area, bio, approximate location for "books near me", weekly
       digest, suspension notice, sign out
-- [ ] Saved books and wishlist, public profiles and ratings
+- [x] Saved books and wishlist (tabs in My Books; wishlist follows the `feature_wishlists` flag)
+- [ ] Public profiles and ratings
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**

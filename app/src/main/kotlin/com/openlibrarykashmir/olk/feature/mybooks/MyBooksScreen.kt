@@ -52,13 +52,19 @@ import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import kotlinx.coroutines.launch
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
+import com.openlibrarykashmir.olk.feature.lists.SavedTab
+import com.openlibrarykashmir.olk.feature.lists.WishlistTab
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyBooksScreen(
     onBookClick: (String) -> Unit,
+    onOpenBook: (String) -> Unit,
     onAddBook: () -> Unit,
+    showWishlist: Boolean,
     resultMessage: String?,
     onResultMessageShown: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
@@ -67,6 +73,12 @@ fun MyBooksScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val tabs = remember(showWishlist) {
+        listOfNotNull(MyBooksTab.MINE, MyBooksTab.SAVED, MyBooksTab.WISHLIST.takeIf { showWishlist })
+    }
+    var selectedTabName by rememberSaveable { mutableStateOf(MyBooksTab.MINE.name) }
+    // Falls back to Mine if the Wishlist tab is switched off while it is open.
+    val selectedTab = tabs.firstOrNull { it.name == selectedTabName } ?: MyBooksTab.MINE
 
     LifecycleStartEffect(viewModel) {
         viewModel.refresh()
@@ -87,11 +99,13 @@ fun MyBooksScreen(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAddBook,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add book") },
-            )
+            if (selectedTab == MyBooksTab.MINE) {
+                ExtendedFloatingActionButton(
+                    onClick = onAddBook,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Add book") },
+                )
+            }
         },
         topBar = {
             TopAppBar(
@@ -100,28 +114,56 @@ fun MyBooksScreen(
             )
         },
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when {
-                state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            PrimaryTabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
+                tabs.forEach { tab ->
+                    Tab(
+                        selected = tab == selectedTab,
+                        onClick = { selectedTabName = tab.name },
+                        text = { Text(tab.label) },
+                        // Tab's default draws unselected labels in the selected colour.
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            when (selectedTab) {
+                MyBooksTab.MINE -> MineTab(state, viewModel, onBookClick)
+                MyBooksTab.SAVED -> SavedTab(onOpenBook = onOpenBook)
+                MyBooksTab.WISHLIST -> WishlistTab(onOpenBook = onOpenBook)
+            }
+        }
+    }
+}
 
-                state.error != null && state.books.isEmpty() -> CenteredMessage(
-                    text = state.error.orEmpty(),
-                    actionLabel = "Try again",
-                    onAction = viewModel::refresh,
-                )
+private enum class MyBooksTab(val label: String) {
+    MINE("Mine"),
+    SAVED("Saved"),
+    WISHLIST("Wishlist"),
+}
 
-                state.books.isEmpty() -> CenteredMessage(
-                    text = "You haven't listed any books yet.\nTap Add book to share your first one.",
-                )
+@Composable
+private fun MineTab(state: MyBooksUiState, viewModel: MyBooksViewModel, onBookClick: (String) -> Unit) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-                else -> LazyColumn(
-                    // Extra bottom space so the Add book button never covers the last card.
-                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(state.books, key = { it.id }) { book ->
-                        MyBookCard(book = book, onClick = { onBookClick(book.id) })
-                    }
+            state.error != null && state.books.isEmpty() -> CenteredMessage(
+                text = state.error.orEmpty(),
+                actionLabel = "Try again",
+                onAction = viewModel::refresh,
+            )
+
+            state.books.isEmpty() -> CenteredMessage(
+                text = "You haven't listed any books yet.\nTap Add book to share your first one.",
+            )
+
+            else -> LazyColumn(
+                // Extra bottom space so the Add book button never covers the last card.
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(state.books, key = { it.id }) { book ->
+                    MyBookCard(book = book, onClick = { onBookClick(book.id) })
                 }
             }
         }

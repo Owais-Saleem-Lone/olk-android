@@ -267,7 +267,9 @@ fun OlkNavHost(
                     .collectAsStateWithLifecycle()
                 MyBooksScreen(
                     onBookClick = { bookId -> navController.navigate(EditBookRoute(bookId)) },
+                    onOpenBook = { bookId -> navController.navigate(BookDetailRoute(bookId)) },
                     onAddBook = { navController.navigate(AddBookRoute) },
+                    showWishlist = featureFlags.wishlists,
                     resultMessage = resultMessage,
                     onResultMessageShown = { entry.savedStateHandle[RESULT_MESSAGE_KEY] = null },
                     actions = bell,
