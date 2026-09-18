@@ -1,5 +1,6 @@
 package com.openlibrarykashmir.olk.feature.requests
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -26,10 +29,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -41,13 +47,21 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,16 +69,21 @@ import coil3.compose.AsyncImage
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import com.openlibrarykashmir.olk.core.data.repository.BookRequestItem
-import org.koin.androidx.compose.koinViewModel
+import com.openlibrarykashmir.olk.core.data.repository.RequestsRepository
+import com.openlibrarykashmir.olk.core.designsystem.theme.OlkPalette
 import kotlin.math.abs
+import kotlin.math.roundToInt
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestsScreen(
     onMessage: (requestId: String) -> Unit,
-    messagingEnabled: Boolean = true,
-    actions: @Composable RowScope.() -> Unit = {},
+    onOpenProfile: (userId: String) -> Unit,
     modifier: Modifier = Modifier,
+    messagingEnabled: Boolean = true,
+    ratingsEnabled: Boolean = true,
+    actions: @Composable RowScope.() -> Unit = {},
     viewModel: RequestsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -143,6 +162,11 @@ fun RequestsScreen(
                                 onAction = { action -> viewModel.onAction(item, action) },
                                 onMessage = { onMessage(item.id) },
                                 messagingEnabled = messagingEnabled,
+                                onOpenProfile = onOpenProfile,
+                                canRate = ratingsEnabled && canRate(item, state.ratedRequestIds),
+                                onRate = { viewModel.openRating(item) },
+                                progress = if (showsProgress(item, state.selected)) state.progress[item.id] ?: 0 else null,
+                                onSaveProgress = { pct -> viewModel.saveProgress(item, pct) },
                             )
                         }
                     }
@@ -170,6 +194,14 @@ fun RequestsScreen(
             dismissButton = { TextButton(onClick = viewModel::dismissConfirmation) { Text("Not now") } },
         )
     }
+
+    state.rating?.let { item ->
+        RatingDialog(
+            personName = item.otherParty?.displayName ?: "this reader",
+            onDismiss = viewModel::dismissRating,
+            onSubmit = viewModel::submitRating,
+        )
+    }
 }
 
 @Composable
@@ -181,6 +213,12 @@ private fun RequestCard(
     onAction: (RequestAction) -> Unit,
     onMessage: () -> Unit,
     messagingEnabled: Boolean,
+    onOpenProfile: (String) -> Unit,
+    canRate: Boolean,
+    onRate: () -> Unit,
+    /** Saved progress when the slider applies (this user's borrowed book), else null. */
+    progress: Int?,
+    onSaveProgress: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -222,15 +260,21 @@ private fun RequestCard(
                         )
                         RequestStatusChip(item, direction, modifier = Modifier.padding(start = 8.dp))
                     }
-                    val person = item.otherParty?.let { other ->
-                        listOfNotNull(other.displayName ?: "Unknown reader", other.areaName).joinToString(" · ")
-                    } ?: "Unknown reader"
+                    val other = item.otherParty
                     Text(
-                        text = (if (direction == RequestDirection.INCOMING) "Requested by " else "Owned by ") + person,
+                        text = buildAnnotatedString {
+                            append(if (direction == RequestDirection.INCOMING) "Requested by " else "Owned by ")
+                            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)) {
+                                append(other?.displayName ?: "Unknown reader")
+                            }
+                            other?.areaName?.takeIf { it.isNotBlank() }?.let { append(" · $it") }
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        // Opens their public profile, as the name links on the website.
+                        modifier = if (other != null) Modifier.clickable { onOpenProfile(other.id) } else Modifier,
                     )
                     Text(
                         text = when (item.book.listingType) {
@@ -245,11 +289,13 @@ private fun RequestCard(
                 }
             }
 
+            progress?.let { saved -> ProgressControl(saved, onSaveProgress) }
+
             val actions = actionsFor(item, direction)
             // Chat is for arranging the exchange, so it is offered while one is under way.
             val canMessage = messagingEnabled &&
                 (item.status == RequestStatus.ACCEPTED || item.status == RequestStatus.HANDED_OVER)
-            if (actions.isNotEmpty() || canMessage) {
+            if (actions.isNotEmpty() || canMessage || canRate) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
@@ -277,14 +323,74 @@ private fun RequestCard(
                     if (canMessage) {
                         OutlinedButton(onClick = onMessage) { Text("Message") }
                     }
+                    if (canRate) {
+                        OutlinedButton(onClick = onRate, enabled = actionsEnabled) { Text("Rate") }
+                    }
                 }
             }
         }
     }
 }
 
+/** "How far have you read?" — public as a percentage, like the website's slider. */
 @Composable
-private fun DueLine(item: BookRequestItem) {
+private fun ProgressControl(saved: Int, onSave: (Int) -> Unit) {
+    var value by remember(saved) { mutableFloatStateOf(saved.toFloat()) }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Reading progress", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            Text("${value.roundToInt()}%", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        }
+        Slider(
+            value = value,
+            onValueChange = { value = it },
+            // Saved when the finger lifts, not on every step of the drag.
+            onValueChangeFinished = { if (value.roundToInt() != saved) onSave(value.roundToInt()) },
+            valueRange = 0f..100f,
+            steps = 19,
+        )
+    }
+}
+
+@Composable
+private fun RatingDialog(personName: String, onDismiss: () -> Unit, onSubmit: (Int, String) -> Unit) {
+    var score by remember { mutableIntStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rate $personName") },
+        text = {
+            Column {
+                Row {
+                    (1..5).forEach { star ->
+                        IconButton(onClick = { score = star }) {
+                            Icon(
+                                imageVector = if (star <= score) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription = "$star star" + if (star > 1) "s" else "",
+                                tint = if (star <= score) OlkPalette.Amber400 else MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it.take(RequestsRepository.MAX_RATING_COMMENT) },
+                    placeholder = { Text("Optional comment…") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSubmit(score, comment) }, enabled = score > 0) { Text("Submit") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } },
+    )
+}
+
+/** "Due back in N days" / "Overdue by N days" for a lend the reader has; nothing otherwise. */
+@Composable
+internal fun DueLine(item: BookRequestItem) {
     if (item.status != RequestStatus.HANDED_OVER || item.book.listingType != ListingType.LEND) return
     val days = dueDaysLeft(item.handedOverAt, item.book.lendingDurationMonths) ?: return
     val (text, isWarning) = when {

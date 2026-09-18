@@ -2,15 +2,11 @@ package com.openlibrarykashmir.olk.core.data.repository
 
 import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookDetail
-import com.openlibrarykashmir.olk.core.data.model.BookStatus
 import com.openlibrarykashmir.olk.core.data.model.IdRow
-import com.openlibrarykashmir.olk.core.data.model.OwnerProfileRow
-import com.openlibrarykashmir.olk.core.data.model.OwnerSummary
+import com.openlibrarykashmir.olk.core.data.model.ProgressRow
 import com.openlibrarykashmir.olk.core.data.model.RequestOutcome
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import com.openlibrarykashmir.olk.core.data.model.RequestStatusRow
-import com.openlibrarykashmir.olk.core.data.model.ScoreRow
-import com.openlibrarykashmir.olk.core.data.model.StatusRow
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.from
@@ -19,7 +15,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import kotlin.math.roundToInt
 
 interface BookDetailRepository {
     /** Null when the book does not exist or RLS hides it from this viewer. */
@@ -41,21 +36,13 @@ internal class SupabaseBookDetailRepository(
         // Everything below depends only on the book row and the viewer, never on
         // each other — the same fan-out the web page does with Promise.all. On a
         // slow link, five round trips in parallel beat five in sequence by seconds.
-        val profile = async {
-            client.from("profiles")
-                .select(Columns.list("id", "display_name", "area_name", "bio", "created_at")) {
-                    filter { eq("id", book.ownerId) }
-                }.decodeSingleOrNull<OwnerProfileRow>()
-        }
-        val ownerBooks = async {
-            client.from("books").select(Columns.list("status")) {
-                filter { eq("owner_id", book.ownerId) }
-            }.decodeList<StatusRow>()
-        }
-        val scores = async {
-            client.from("ratings").select(Columns.list("score")) {
-                filter { eq("rated_user_id", book.ownerId) }
-            }.decodeList<ScoreRow>()
+        val owner = async { client.ownerSummary(book.ownerId) }
+        // Public "X% read" for the current borrower, as the web book page shows.
+        val progress = async {
+            client.from("book_progress").select(Columns.list("progress_pct")) {
+                filter { eq("book_id", bookId) }
+                limit(1)
+            }.decodeSingleOrNull<ProgressRow>()?.progressPct
         }
         val activeRequest = async {
             client.from("book_requests").select(Columns.list("status")) {
@@ -77,27 +64,10 @@ internal class SupabaseBookDetailRepository(
             }.decodeList<IdRow>().isNotEmpty()
         }
 
-        val ownerStatuses = ownerBooks.await()
-        val ratingScores = scores.await().map { it.score }
-
         BookDetail(
             book = book,
-            owner = profile.await()?.let { row ->
-                OwnerSummary(
-                    id = row.id,
-                    displayName = row.displayName,
-                    areaName = row.areaName,
-                    bio = row.bio,
-                    joinedAt = row.createdAt,
-                    booksListed = ownerStatuses.size,
-                    booksAvailable = ownerStatuses.count { it.status == BookStatus.AVAILABLE },
-                    booksShared = ownerStatuses.count { it.status == BookStatus.GIVEN },
-                    // One decimal place, matching the web page's rounding.
-                    ratingAverage = ratingScores.takeIf { it.isNotEmpty() }
-                        ?.let { (it.average() * 10).roundToInt() / 10.0 },
-                    ratingCount = ratingScores.size,
-                )
-            },
+            owner = owner.await(),
+            readingProgressPct = progress.await(),
             isOwnBook = book.ownerId == viewerId,
             myRequestStatus = activeRequest.await()?.status,
             isSaved = saved.await(),

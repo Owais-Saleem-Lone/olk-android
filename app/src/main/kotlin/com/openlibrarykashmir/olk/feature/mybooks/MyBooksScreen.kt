@@ -23,11 +23,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -51,11 +54,10 @@ import coil3.compose.AsyncImage
 import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
 import com.openlibrarykashmir.olk.core.data.model.ListingType
-import kotlinx.coroutines.launch
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Tab
 import com.openlibrarykashmir.olk.feature.lists.SavedTab
 import com.openlibrarykashmir.olk.feature.lists.WishlistTab
+import com.openlibrarykashmir.olk.feature.requests.DueLine
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,8 +69,8 @@ fun MyBooksScreen(
     showWishlist: Boolean,
     resultMessage: String?,
     onResultMessageShown: () -> Unit,
-    actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier,
+    actions: @Composable RowScope.() -> Unit = {},
     viewModel: MyBooksViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -127,7 +129,7 @@ fun MyBooksScreen(
                 }
             }
             when (selectedTab) {
-                MyBooksTab.MINE -> MineTab(state, viewModel, onBookClick)
+                MyBooksTab.MINE -> MineTab(state, viewModel, onBookClick, onOpenBook)
                 MyBooksTab.SAVED -> SavedTab(onOpenBook = onOpenBook)
                 MyBooksTab.WISHLIST -> WishlistTab(onOpenBook = onOpenBook)
             }
@@ -142,18 +144,23 @@ private enum class MyBooksTab(val label: String) {
 }
 
 @Composable
-private fun MineTab(state: MyBooksUiState, viewModel: MyBooksViewModel, onBookClick: (String) -> Unit) {
+private fun MineTab(
+    state: MyBooksUiState,
+    viewModel: MyBooksViewModel,
+    onBookClick: (String) -> Unit,
+    onOpenBook: (String) -> Unit,
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-            state.error != null && state.books.isEmpty() -> CenteredMessage(
+            state.error != null && state.books.isEmpty() && state.reading.isEmpty() -> CenteredMessage(
                 text = state.error.orEmpty(),
                 actionLabel = "Try again",
                 onAction = viewModel::refresh,
             )
 
-            state.books.isEmpty() -> CenteredMessage(
+            state.books.isEmpty() && state.reading.isEmpty() -> CenteredMessage(
                 text = "You haven't listed any books yet.\nTap Add book to share your first one.",
             )
 
@@ -162,10 +169,59 @@ private fun MineTab(state: MyBooksUiState, viewModel: MyBooksViewModel, onBookCl
                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (state.reading.isNotEmpty()) {
+                    item { SectionTitle("Books you're reading") }
+                    items(state.reading, key = { "reading-${it.request.id}" }) { reading ->
+                        ReadingCard(reading, onClick = { onOpenBook(reading.request.book.id) })
+                    }
+                    item { SectionTitle("Your listings", Modifier.padding(top = 8.dp)) }
+                }
+                if (state.books.isEmpty()) {
+                    item {
+                        Text(
+                            "You haven't listed any books yet. Tap Add book to share your first one.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 items(state.books, key = { it.id }) { book ->
                     MyBookCard(book = book, onClick = { onBookClick(book.id) })
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    Text(text, style = MaterialTheme.typography.titleMedium, modifier = modifier)
+}
+
+/** A book handed over to this user: who it is from, when it is due, how far they are. */
+@Composable
+private fun ReadingCard(reading: ReadingNow, onClick: () -> Unit) {
+    val request = reading.request
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Text(request.book.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = (if (request.book.listingType == ListingType.DONATE) "Donated by " else "Lent by ") +
+                    (request.otherParty?.displayName ?: "another reader"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            DueLine(request)
+            val pct = reading.progressPct ?: 0
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                LinearProgressIndicator(progress = { pct / 100f }, modifier = Modifier.weight(1f))
+                Text("$pct%", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 8.dp))
+            }
+            Text(
+                "Update your progress on the Requests tab.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

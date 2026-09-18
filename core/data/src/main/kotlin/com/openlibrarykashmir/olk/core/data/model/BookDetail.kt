@@ -14,6 +14,8 @@ import kotlinx.serialization.Serializable
 data class BookDetail(
     val book: Book,
     val owner: OwnerSummary?,
+    /** How far the current borrower has read, when they have shared it. Public, as on the web. */
+    val readingProgressPct: Int? = null,
     val isOwnBook: Boolean,
     val myRequestStatus: RequestStatus?,
     val isSaved: Boolean,
@@ -92,3 +94,6 @@ internal data class ScoreRow(val score: Int)
 
 @Serializable
 internal data class IdRow(val id: String)
+
+@Serializable
+internal data class ProgressRow(@SerialName("progress_pct") val progressPct: Int)

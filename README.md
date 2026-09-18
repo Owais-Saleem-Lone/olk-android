@@ -132,7 +132,7 @@ The next build without those variables points back at your usual project.
 - [x] Profile — name, area, bio, approximate location for "books near me", weekly
       digest, suspension notice, sign out
 - [x] Saved books and wishlist (tabs in My Books; wishlist follows the `feature_wishlists` flag)
-- [ ] Public profiles and ratings
+- [x] Public profiles, ratings, reading progress and "Books you're reading" in My Books
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**

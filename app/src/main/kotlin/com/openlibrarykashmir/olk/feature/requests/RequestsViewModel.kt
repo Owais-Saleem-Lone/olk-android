@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import com.openlibrarykashmir.olk.core.data.repository.BookRequestItem
+import com.openlibrarykashmir.olk.core.data.repository.RateOutcome
 import com.openlibrarykashmir.olk.core.data.repository.RequestActionOutcome
 import com.openlibrarykashmir.olk.core.data.repository.RequestsRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
@@ -76,6 +77,19 @@ fun dueDaysLeft(
 
 private const val MILLIS_PER_DAY = 86_400_000L
 
+/**
+ * Whether to offer Rate: the other party of a handed-over or returned exchange,
+ * once per exchange. The `ratings` insert policy enforces the same.
+ */
+fun canRate(item: BookRequestItem, ratedRequestIds: Set<String>): Boolean =
+    item.otherParty != null &&
+        item.id !in ratedRequestIds &&
+        (item.status == RequestStatus.HANDED_OVER || item.status == RequestStatus.RETURNED)
+
+/** The reading-progress slider: only the reader, only while they have the book. */
+fun showsProgress(item: BookRequestItem, direction: RequestDirection): Boolean =
+    direction == RequestDirection.OUTGOING && item.status == RequestStatus.HANDED_OVER
+
 data class PendingConfirmation(val item: BookRequestItem, val action: RequestAction)
 
 data class RequestsUiState(
@@ -90,6 +104,12 @@ data class RequestsUiState(
     /** The request an action is in flight for, so only its buttons disable. */
     val busyRequestId: String? = null,
     val confirmation: PendingConfirmation? = null,
+    /** Exchanges this user has already rated. */
+    val ratedRequestIds: Set<String> = emptySet(),
+    /** Shared reading progress on this user's own borrowed books, by request id. */
+    val progress: Map<String, Int> = emptyMap(),
+    /** The exchange the rating dialog is open for. */
+    val rating: BookRequestItem? = null,
 ) {
     val visible: List<BookRequestItem>
         get() = if (selected == RequestDirection.INCOMING) incoming else outgoing
@@ -127,10 +147,23 @@ class RequestsViewModel(
             runCatching {
                 val incoming = async { repository.incoming(userId) }
                 val outgoing = async { repository.outgoing(userId) }
-                incoming.await() to outgoing.await()
-            }.onSuccess { (incoming, outgoing) ->
+                // Extras: a failure here should not blank the lists.
+                val rated = async { runCatching { repository.ratedRequestIds(userId) }.getOrDefault(emptySet()) }
+                val out = outgoing.await()
+                val progress = runCatching {
+                    repository.progress(out.filter { it.status == RequestStatus.HANDED_OVER }.map { it.id })
+                }.getOrDefault(emptyMap())
+                Loaded(incoming.await(), out, rated.await(), progress)
+            }.onSuccess { loaded ->
                 _uiState.update {
-                    it.copy(incoming = incoming, outgoing = outgoing, isLoading = false, isRefreshing = false)
+                    it.copy(
+                        incoming = loaded.incoming,
+                        outgoing = loaded.outgoing,
+                        ratedRequestIds = loaded.rated,
+                        progress = loaded.progress,
+                        isLoading = false,
+                        isRefreshing = false,
+                    )
                 }
             }.onFailure { throwable ->
                 val message = throwable.toUserMessage()
@@ -156,6 +189,58 @@ class RequestsViewModel(
     }
 
     fun dismissConfirmation() = _uiState.update { it.copy(confirmation = null) }
+
+    fun openRating(item: BookRequestItem) = _uiState.update { it.copy(rating = item) }
+
+    fun dismissRating() = _uiState.update { it.copy(rating = null) }
+
+    fun submitRating(score: Int, comment: String) {
+        val item = _uiState.value.rating ?: return
+        val rated = item.otherParty ?: return
+        val userId = auth.currentUserId() ?: return
+        _uiState.update { it.copy(rating = null, busyRequestId = item.id) }
+        viewModelScope.launch {
+            runCatching {
+                repository.rate(item.id, userId, rated.id, score.coerceIn(1, 5), comment.take(RequestsRepository.MAX_RATING_COMMENT))
+            }.onSuccess { outcome ->
+                // Rated or already rated: either way the button should go.
+                if (outcome != RateOutcome.NotAllowed) {
+                    _uiState.update { it.copy(ratedRequestIds = it.ratedRequestIds + item.id) }
+                }
+                _messages.send(
+                    when (outcome) {
+                        RateOutcome.Rated -> "Thanks for rating."
+                        RateOutcome.AlreadyRated -> "You have already rated this exchange."
+                        RateOutcome.NotAllowed -> "This exchange can't be rated."
+                    },
+                )
+            }.onFailure { _messages.send(it.toUserMessage()) }
+            _uiState.update { it.copy(busyRequestId = null) }
+        }
+    }
+
+    /** Saves the slider's value; the slider already shows it, so only a refusal is reported. */
+    fun saveProgress(item: BookRequestItem, percent: Int) {
+        val before = _uiState.value.progress[item.id]
+        _uiState.update { it.copy(progress = it.progress + (item.id to percent)) }
+        viewModelScope.launch {
+            runCatching { repository.setProgress(item.id, percent) }
+                .onSuccess { outcome ->
+                    if (outcome == RequestActionOutcome.OutOfDate) {
+                        _messages.send("This book is no longer with you. Showing the latest.")
+                        refresh()
+                    } else {
+                        _messages.send("Progress saved: $percent%.")
+                    }
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(progress = if (before == null) it.progress - item.id else it.progress + (item.id to before))
+                    }
+                    _messages.send(t.toUserMessage())
+                }
+        }
+    }
 
     private fun perform(item: BookRequestItem, action: RequestAction) {
         if (_uiState.value.busyRequestId != null) return
@@ -183,6 +268,13 @@ class RequestsViewModel(
         }
     }
 }
+
+private data class Loaded(
+    val incoming: List<BookRequestItem>,
+    val outgoing: List<BookRequestItem>,
+    val rated: Set<String>,
+    val progress: Map<String, Int>,
+)
 
 private fun RequestAction.successMessage() = when (this) {
     RequestAction.ACCEPT -> "Request accepted. Arrange the handover with the reader."

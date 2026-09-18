@@ -15,6 +15,7 @@ import com.openlibrarykashmir.olk.feature.mybooks.DeviceCoverUploader
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookViewModel
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksViewModel
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
+import com.openlibrarykashmir.olk.feature.people.UserProfileViewModel
 import com.openlibrarykashmir.olk.feature.profile.DeviceLocator
 import com.openlibrarykashmir.olk.feature.profile.Locator
 import com.openlibrarykashmir.olk.feature.profile.ProfileViewModel
@@ -31,7 +32,7 @@ val appModule = module {
     viewModel { HomeViewModel(get()) }
     viewModel { (query: String) -> BrowseViewModel(get(), query) }
     viewModel { (bookId: String) -> BookDetailViewModel(bookId, get(), get()) }
-    viewModel { MyBooksViewModel(get(), get()) }
+    viewModel { MyBooksViewModel(get(), get(), get()) }
     viewModel { RequestsViewModel(get(), get()) }
     viewModel { MessagesViewModel(get(), get()) }
     viewModel { NotificationsViewModel(get(), get()) }
@@ -41,4 +42,5 @@ val appModule = module {
     viewModel { AddBookViewModel(get(), get(), get(), get()) }
     viewModel { SavedViewModel(get(), get()) }
     viewModel { WishlistViewModel(get(), get()) }
+    viewModel { (userId: String) -> UserProfileViewModel(userId, get()) }
 }

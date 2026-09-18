@@ -2,18 +2,22 @@ package com.openlibrarykashmir.olk
 
 import app.cash.turbine.test
 import com.openlibrarykashmir.olk.core.data.model.Book
-import com.openlibrarykashmir.olk.core.data.model.BrowseBook
-import com.openlibrarykashmir.olk.core.data.model.BrowseFilters
 import com.openlibrarykashmir.olk.core.data.model.BookCondition
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
+import com.openlibrarykashmir.olk.core.data.model.BrowseBook
+import com.openlibrarykashmir.olk.core.data.model.BrowseFilters
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import com.openlibrarykashmir.olk.core.data.repository.AddBookOutcome
 import com.openlibrarykashmir.olk.core.data.repository.BookEdit
 import com.openlibrarykashmir.olk.core.data.repository.BookRepository
+import com.openlibrarykashmir.olk.core.data.repository.BookRequestItem
 import com.openlibrarykashmir.olk.core.data.repository.DeleteOutcome
 import com.openlibrarykashmir.olk.core.data.repository.IsbnLookupRepository
 import com.openlibrarykashmir.olk.core.data.repository.MyBooksRepository
 import com.openlibrarykashmir.olk.core.data.repository.NewBook
+import com.openlibrarykashmir.olk.core.data.repository.RateOutcome
+import com.openlibrarykashmir.olk.core.data.repository.RequestActionOutcome
+import com.openlibrarykashmir.olk.core.data.repository.RequestsRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthState
 import com.openlibrarykashmir.olk.feature.mybooks.AddBookViewModel
@@ -72,6 +76,22 @@ class MyBooksViewModelsTest {
         override suspend fun hasSavedLocation() = false
     }
 
+    /** No exchanges: the "Books you're reading" section stays empty. */
+    private object NoRequests : RequestsRepository {
+        override suspend fun incoming(ownerId: String) = emptyList<BookRequestItem>()
+        override suspend fun outgoing(requesterId: String) = emptyList<BookRequestItem>()
+        override suspend fun accept(requestId: String) = RequestActionOutcome.Done
+        override suspend fun decline(requestId: String) = RequestActionOutcome.Done
+        override suspend fun confirmHandover(requestId: String) = RequestActionOutcome.Done
+        override suspend fun confirmReturn(requestId: String) = RequestActionOutcome.Done
+        override suspend fun completeDonatedReading(requestId: String) = RequestActionOutcome.Done
+        override suspend fun ratedRequestIds(raterId: String) = emptySet<String>()
+        override suspend fun rate(requestId: String, raterId: String, ratedUserId: String, score: Int, comment: String?) =
+            RateOutcome.Rated
+        override suspend fun progress(requestIds: List<String>) = emptyMap<String, Int>()
+        override suspend fun setProgress(requestId: String, percent: Int) = RequestActionOutcome.Done
+    }
+
     private class FakeMyBooks(
         var books: List<Book> = emptyList(),
         var deleteOutcome: DeleteOutcome = DeleteOutcome.Deleted,
@@ -113,7 +133,7 @@ class MyBooksViewModelsTest {
     @Test
     fun `my books refresh keeps the list on screen when a later refresh fails`() = runTest {
         val repo = FakeMyBooks(books = listOf(book("a"), book("b")))
-        val viewModel = MyBooksViewModel(repo, FakeAuth(ME))
+        val viewModel = MyBooksViewModel(repo, NoRequests, FakeAuth(ME))
 
         viewModel.refresh()
         advanceUntilIdle()

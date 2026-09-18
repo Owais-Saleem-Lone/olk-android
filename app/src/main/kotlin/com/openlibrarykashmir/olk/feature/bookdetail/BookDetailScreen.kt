@@ -37,6 +37,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -77,6 +78,7 @@ import java.util.Locale
 fun BookDetailScreen(
     bookId: String,
     onBack: () -> Unit,
+    onOpenProfile: (userId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BookDetailViewModel = koinViewModel(key = bookId) { parametersOf(bookId) },
 ) {
@@ -147,14 +149,14 @@ fun BookDetailScreen(
                     onAction = viewModel::load,
                 )
 
-                is BookDetailUiState.Content -> DetailBody(s)
+                is BookDetailUiState.Content -> DetailBody(s, onOpenProfile)
             }
         }
     }
 }
 
 @Composable
-private fun DetailBody(state: BookDetailUiState.Content) {
+private fun DetailBody(state: BookDetailUiState.Content, onOpenProfile: (String) -> Unit) {
     val book = state.detail.book
     Column(
         modifier = Modifier
@@ -231,9 +233,23 @@ private fun DetailBody(state: BookDetailUiState.Content) {
             )
         }
 
+        state.detail.readingProgressPct?.let { pct ->
+            Column(Modifier.padding(top = 16.dp)) {
+                Text(
+                    text = "Current reader is $pct% through",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LinearProgressIndicator(
+                    progress = { pct / 100f },
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+            }
+        }
+
         state.detail.owner?.let {
             Spacer(Modifier.height(28.dp))
-            OwnerCard(it)
+            OwnerCard(it, onClick = { onOpenProfile(it.id) })
         }
         Spacer(Modifier.height(24.dp))
     }
@@ -316,13 +332,19 @@ private fun MetaLine(book: Book) {
     }
 }
 
+/**
+ * A person's public summary: the book page's owner card, and the header of their
+ * public profile. With [onClick] the card opens that profile.
+ */
 @Composable
-private fun OwnerCard(owner: OwnerSummary) {
+internal fun OwnerCard(owner: OwnerSummary, heading: String = "ABOUT THE OWNER", onClick: (() -> Unit)? = null) {
     val name = owner.displayName?.takeIf { it.isNotBlank() } ?: "Anonymous"
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+    // A disabled clickable card would dim everything, so the plain card is used
+    // when there is nothing to open.
+    val content: @Composable () -> Unit = {
         Column(Modifier.padding(20.dp)) {
             Text(
-                text = "ABOUT THE OWNER",
+                text = heading,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -403,6 +425,11 @@ private fun OwnerCard(owner: OwnerSummary) {
                 Stat(owner.booksShared, "Shared", Modifier.weight(1f))
             }
         }
+    }
+    if (onClick != null) {
+        OutlinedCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) { content() }
+    } else {
+        OutlinedCard(modifier = Modifier.fillMaxWidth()) { content() }
     }
 }
 

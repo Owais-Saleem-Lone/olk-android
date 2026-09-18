@@ -35,10 +35,10 @@ import androidx.navigation.toRoute
 import com.openlibrarykashmir.olk.core.data.repository.FeatureFlags
 import com.openlibrarykashmir.olk.feature.auth.AuthScreen
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
-import com.openlibrarykashmir.olk.feature.messages.ChatScreen
-import com.openlibrarykashmir.olk.feature.messages.MessagesScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
 import com.openlibrarykashmir.olk.feature.home.HomeScreen
+import com.openlibrarykashmir.olk.feature.messages.ChatScreen
+import com.openlibrarykashmir.olk.feature.messages.MessagesScreen
 import com.openlibrarykashmir.olk.feature.mybooks.AddBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookScreen
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksScreen
@@ -47,6 +47,7 @@ import com.openlibrarykashmir.olk.feature.notifications.NotificationBell
 import com.openlibrarykashmir.olk.feature.notifications.NotificationTarget
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsScreen
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
+import com.openlibrarykashmir.olk.feature.people.UserProfileScreen
 import com.openlibrarykashmir.olk.feature.profile.ProfileScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
 import kotlinx.serialization.Serializable
@@ -96,6 +97,10 @@ data object NotificationsRoute
 
 @Serializable
 data object ProfileRoute
+
+/** Another reader's public profile. */
+@Serializable
+data class UserProfileRoute(val userId: String)
 
 private enum class TopLevelTab(
     val route: Any,
@@ -244,12 +249,22 @@ fun OlkNavHost(
                 BookDetailScreen(
                     bookId = entry.toRoute<BookDetailRoute>().bookId,
                     onBack = { navController.popBackStack() },
+                    onOpenProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
+                )
+            }
+            composable<UserProfileRoute> { entry ->
+                UserProfileScreen(
+                    userId = entry.toRoute<UserProfileRoute>().userId,
+                    onBack = { navController.popBackStack() },
+                    onBookClick = { bookId -> navController.navigate(BookDetailRoute(bookId)) },
                 )
             }
             composable<RequestsRoute> {
                 RequestsScreen(
                     onMessage = { requestId -> navController.navigate(ChatRoute(requestId)) },
+                    onOpenProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
                     messagingEnabled = featureFlags.messages,
+                    ratingsEnabled = featureFlags.ratings,
                     actions = bell,
                 )
             }

@@ -71,6 +71,39 @@ interface RequestsRepository {
      * ownership, putting the book into permanent circulation.
      */
     suspend fun completeDonatedReading(requestId: String): RequestActionOutcome
+
+    /** Requests [raterId] has already rated; each exchange can be rated once per side. */
+    suspend fun ratedRequestIds(raterId: String): Set<String>
+
+    /**
+     * Rates the other party of a handed-over or returned exchange (the insert
+     * policy on `ratings` enforces both). [comment] is at most [MAX_RATING_COMMENT].
+     */
+    suspend fun rate(requestId: String, raterId: String, ratedUserId: String, score: Int, comment: String?): RateOutcome
+
+    /** The reader's shared progress for these requests, by request id. */
+    suspend fun progress(requestIds: List<String>): Map<String, Int>
+
+    /**
+     * Requester only, while the book is handed over (`set_reading_progress`);
+     * anything else is [RequestActionOutcome.OutOfDate].
+     */
+    suspend fun setProgress(requestId: String, percent: Int): RequestActionOutcome
+
+    companion object {
+        /** `ratings_comment_length` in the database. */
+        const val MAX_RATING_COMMENT = 1000
+    }
+}
+
+sealed interface RateOutcome {
+    data object Rated : RateOutcome
+
+    /** Already rated from this device, the website or another phone. */
+    data object AlreadyRated : RateOutcome
+
+    /** The exchange is not (or no longer) one this person can rate. */
+    data object NotAllowed : RateOutcome
 }
 
 internal class SupabaseRequestsRepository(
@@ -115,6 +148,61 @@ internal class SupabaseRequestsRepository(
     override suspend fun completeDonatedReading(requestId: String) =
         rpc("complete_donated_book_reading", requestId)
 
+    override suspend fun ratedRequestIds(raterId: String): Set<String> =
+        client.from("ratings").select(Columns.list("request_id")) {
+            filter { eq("rater_id", raterId) }
+        }.decodeList<RatedRow>().mapNotNullTo(HashSet()) { it.requestId }
+
+    override suspend fun rate(
+        requestId: String,
+        raterId: String,
+        ratedUserId: String,
+        score: Int,
+        comment: String?,
+    ): RateOutcome =
+        try {
+            client.from("ratings").insert(
+                buildJsonObject {
+                    put("request_id", requestId)
+                    put("rater_id", raterId)
+                    put("rated_user_id", ratedUserId)
+                    put("score", score)
+                    comment?.trim()?.takeIf { it.isNotEmpty() }?.let { put("comment", it) }
+                },
+            )
+            RateOutcome.Rated
+        } catch (e: PostgrestRestException) {
+            when (e.code) {
+                UNIQUE_VIOLATION -> RateOutcome.AlreadyRated
+                INSUFFICIENT_PRIVILEGE -> RateOutcome.NotAllowed
+                else -> throw e
+            }
+        }
+
+    override suspend fun progress(requestIds: List<String>): Map<String, Int> =
+        if (requestIds.isEmpty()) {
+            emptyMap()
+        } else {
+            client.from("book_progress").select(Columns.list("request_id", "progress_pct")) {
+                filter { isIn("request_id", requestIds) }
+            }.decodeList<ProgressByRequestRow>().associate { it.requestId to it.progressPct }
+        }
+
+    override suspend fun setProgress(requestId: String, percent: Int): RequestActionOutcome =
+        try {
+            client.postgrest.rpc(
+                "set_reading_progress",
+                buildJsonObject {
+                    put("p_request_id", requestId)
+                    put("p_progress_pct", percent.coerceIn(0, 100))
+                },
+            )
+            RequestActionOutcome.Done
+        } catch (e: PostgrestRestException) {
+            // PROGRESS_NOT_ALLOWED: returned, or no longer this person's book.
+            if (e.code == CHECK_VIOLATION) RequestActionOutcome.OutOfDate else throw e
+        }
+
     private suspend fun answer(requestId: String, status: RequestStatus): RequestActionOutcome =
         try {
             val updated = client.from(TABLE).update(
@@ -151,6 +239,8 @@ internal class SupabaseRequestsRepository(
         const val PROFILE_COLUMNS = "id, display_name, area_name"
         const val INSUFFICIENT_PRIVILEGE = "42501"
         const val RAISED_EXCEPTION = "P0001"
+        const val UNIQUE_VIOLATION = "23505"
+        const val CHECK_VIOLATION = "23514"
     }
 }
 
@@ -198,3 +288,12 @@ private data class ProfileRow(
 ) {
     fun toSummary() = PersonSummary(id = id, displayName = displayName, areaName = areaName)
 }
+
+@Serializable
+private data class RatedRow(@SerialName("request_id") val requestId: String? = null)
+
+@Serializable
+private data class ProgressByRequestRow(
+    @SerialName("request_id") val requestId: String,
+    @SerialName("progress_pct") val progressPct: Int,
+)
