@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -90,6 +91,9 @@ fun HomeScreen(
     onSearch: (String) -> Unit,
     onBookClick: (String) -> Unit,
     onStartSharing: () -> Unit,
+    onOpenClubs: () -> Unit,
+    /** Whether an admin has clubs switched on; see `platform_settings`. */
+    clubsEnabled: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
@@ -109,6 +113,11 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = { onSearch("") }) {
                         Icon(Icons.Default.Search, contentDescription = "Search books")
+                    }
+                    if (clubsEnabled) {
+                        IconButton(onClick = onOpenClubs) {
+                            Icon(Icons.Default.Groups, contentDescription = "Clubs")
+                        }
                     }
                     actions()
                 },

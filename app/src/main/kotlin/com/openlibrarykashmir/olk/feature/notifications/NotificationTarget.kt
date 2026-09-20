@@ -29,15 +29,20 @@ sealed interface NotificationTarget {
     data object Requests : NotificationTarget
     data object Messages : NotificationTarget
     data object MyBooks : NotificationTarget
+    data class Club(val clubId: String) : NotificationTarget
+    data object Clubs : NotificationTarget
 
     /** Nowhere to go — the notification is its own content. Just mark it read. */
     data object None : NotificationTarget
 
-    /** A page the app does not have yet: profile, clubs, events. */
+    /** A page the app does not have yet: profile, events. */
     data object WebsiteOnly : NotificationTarget
 
     /** Messaging exists in the app but an admin has switched the feature off. */
     data object MessagingOff : NotificationTarget
+
+    /** Clubs exist in the app but an admin has switched the feature off. */
+    data object ClubsOff : NotificationTarget
 }
 
 /**
@@ -48,13 +53,24 @@ sealed interface NotificationTarget {
  * than being ignored: a new notification type shipped on the website should
  * still tell the reader there is something to see, not silently do nothing.
  */
-fun notificationTarget(link: String?, messagingEnabled: Boolean = true): NotificationTarget {
+fun notificationTarget(
+    link: String?,
+    messagingEnabled: Boolean = true,
+    clubsEnabled: Boolean = true,
+): NotificationTarget {
     val path = link?.trim()?.substringBefore('?')?.trimEnd('/').orEmpty()
     if (path.isEmpty() || path == "/notifications") return NotificationTarget.None
 
     val segments = path.removePrefix("/").split('/')
     return when {
         segments.size == 2 && segments[0] == "books" -> NotificationTarget.Book(segments[1])
+        segments[0] == "clubs" && !clubsEnabled -> NotificationTarget.ClubsOff
+        // club_joined, club_membership_approved, club_announcement and
+        // club_request_approved all link to a club. "create" is the website's
+        // club-request form, which the app does not have.
+        segments.size == 2 && segments[0] == "clubs" && segments[1] != "create" ->
+            NotificationTarget.Club(segments[1])
+        segments.size == 1 && segments[0] == "clubs" -> NotificationTarget.Clubs
         segments[0] == "requests" -> NotificationTarget.Requests
         segments[0] == "my-books" -> NotificationTarget.MyBooks
         segments[0] == "messages" && !messagingEnabled -> NotificationTarget.MessagingOff

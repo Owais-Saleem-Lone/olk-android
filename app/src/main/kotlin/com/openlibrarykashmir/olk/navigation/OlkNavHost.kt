@@ -36,6 +36,8 @@ import com.openlibrarykashmir.olk.core.data.repository.FeatureFlags
 import com.openlibrarykashmir.olk.feature.auth.AuthScreen
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
+import com.openlibrarykashmir.olk.feature.clubs.ClubDetailScreen
+import com.openlibrarykashmir.olk.feature.clubs.ClubsScreen
 import com.openlibrarykashmir.olk.feature.home.HomeScreen
 import com.openlibrarykashmir.olk.feature.messages.ChatScreen
 import com.openlibrarykashmir.olk.feature.messages.MessagesScreen
@@ -102,6 +104,12 @@ data object ProfileRoute
 @Serializable
 data class UserProfileRoute(val userId: String)
 
+@Serializable
+data object ClubsRoute
+
+@Serializable
+data class ClubDetailRoute(val clubId: String)
+
 private enum class TopLevelTab(
     val route: Any,
     val routeClass: KClass<*>,
@@ -129,6 +137,8 @@ private enum class TopLevelTab(
 private fun NavHostController.openNotificationTarget(target: NotificationTarget) {
     when (target) {
         is NotificationTarget.Book -> navigate(BookDetailRoute(target.bookId))
+        is NotificationTarget.Club -> navigate(ClubDetailRoute(target.clubId))
+        NotificationTarget.Clubs -> navigate(ClubsRoute)
         is NotificationTarget.Chat -> navigate(ChatRoute(target.requestId))
         NotificationTarget.Requests -> navigateToTab(RequestsRoute)
         NotificationTarget.Messages -> navigateToTab(MessagesRoute)
@@ -136,6 +146,7 @@ private fun NavHostController.openNotificationTarget(target: NotificationTarget)
         NotificationTarget.None,
         NotificationTarget.WebsiteOnly,
         NotificationTarget.MessagingOff,
+        NotificationTarget.ClubsOff,
         -> Unit
     }
 }
@@ -235,7 +246,22 @@ fun OlkNavHost(
                     onBookClick = { bookId -> navController.navigate(BookDetailRoute(bookId)) },
                     // Same as the website's button, which goes to My Books.
                     onStartSharing = { navController.navigateToTab(MyBooksRoute) },
+                    onOpenClubs = { navController.navigate(ClubsRoute) },
+                    clubsEnabled = featureFlags.clubs,
                     actions = bell,
+                )
+            }
+            composable<ClubsRoute> {
+                ClubsScreen(
+                    onClubClick = { clubId -> navController.navigate(ClubDetailRoute(clubId)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<ClubDetailRoute> { entry ->
+                ClubDetailScreen(
+                    clubId = entry.toRoute<ClubDetailRoute>().clubId,
+                    onBack = { navController.popBackStack() },
+                    onMemberClick = { userId -> navController.navigate(UserProfileRoute(userId)) },
                 )
             }
             composable<BrowseRoute> { entry ->
@@ -281,6 +307,7 @@ fun OlkNavHost(
                 NotificationsScreen(
                     viewModel = notificationsViewModel,
                     messagingEnabled = featureFlags.messages,
+                    clubsEnabled = featureFlags.clubs,
                     onOpen = { target -> navController.openNotificationTarget(target) },
                     onBack = { navController.popBackStack() },
                 )

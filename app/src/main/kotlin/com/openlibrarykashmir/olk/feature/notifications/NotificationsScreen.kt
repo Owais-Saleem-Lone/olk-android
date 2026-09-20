@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 fun NotificationsScreen(
     viewModel: NotificationsViewModel,
     messagingEnabled: Boolean,
+    clubsEnabled: Boolean,
     onOpen: (NotificationTarget) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -102,7 +103,7 @@ fun NotificationsScreen(
                             notification = notification,
                             onClick = {
                                 viewModel.markRead(notification)
-                                val target = notificationTarget(notification.link, messagingEnabled)
+                                val target = notificationTarget(notification.link, messagingEnabled, clubsEnabled)
                                 when (target) {
                                     NotificationTarget.None -> Unit
                                     NotificationTarget.WebsiteOnly -> scope.launch {
@@ -113,6 +114,11 @@ fun NotificationsScreen(
                                     NotificationTarget.MessagingOff -> scope.launch {
                                         snackbarHostState.showSnackbar(
                                             "Messages are switched off at the moment.",
+                                        )
+                                    }
+                                    NotificationTarget.ClubsOff -> scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            "Clubs are switched off at the moment.",
                                         )
                                     }
                                     else -> onOpen(target)

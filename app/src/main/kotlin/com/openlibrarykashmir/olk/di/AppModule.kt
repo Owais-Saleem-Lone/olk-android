@@ -4,6 +4,8 @@ import com.openlibrarykashmir.olk.MainViewModel
 import com.openlibrarykashmir.olk.feature.auth.AuthViewModel
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailViewModel
 import com.openlibrarykashmir.olk.feature.browse.BrowseViewModel
+import com.openlibrarykashmir.olk.feature.clubs.ClubDetailViewModel
+import com.openlibrarykashmir.olk.feature.clubs.ClubsViewModel
 import com.openlibrarykashmir.olk.feature.home.HomeViewModel
 import com.openlibrarykashmir.olk.feature.lists.SavedViewModel
 import com.openlibrarykashmir.olk.feature.lists.WishlistViewModel
@@ -43,4 +45,6 @@ val appModule = module {
     viewModel { SavedViewModel(get(), get()) }
     viewModel { WishlistViewModel(get(), get()) }
     viewModel { (userId: String) -> UserProfileViewModel(userId, get()) }
+    viewModel { ClubsViewModel(get(), get()) }
+    viewModel { (clubId: String) -> ClubDetailViewModel(clubId, get(), get()) }
 }

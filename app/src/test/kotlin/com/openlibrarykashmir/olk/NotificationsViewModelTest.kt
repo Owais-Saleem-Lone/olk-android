@@ -246,12 +246,27 @@ class NotificationsViewModelTest {
     @Test
     fun `links the app has no screen for say so instead of doing nothing`() {
         assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/profile"))
-        assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/clubs/c1"))
         assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/events/e1"))
+        // The website's club-request form has no screen here either.
+        assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/clubs/create"))
         // The list itself, or no link at all: already there, nothing to open.
         assertEquals(NotificationTarget.None, notificationTarget("/notifications"))
         assertEquals(NotificationTarget.None, notificationTarget(null))
         assertEquals(NotificationTarget.None, notificationTarget("  "))
+    }
+
+    @Test
+    fun `club links open the club in the app`() {
+        assertEquals(NotificationTarget.Club("c1"), notificationTarget("/clubs/c1"))
+        assertEquals(NotificationTarget.Clubs, notificationTarget("/clubs"))
+    }
+
+    @Test
+    fun `club links do not open while an admin has clubs switched off`() {
+        assertEquals(NotificationTarget.ClubsOff, notificationTarget("/clubs/c1", clubsEnabled = false))
+        assertEquals(NotificationTarget.ClubsOff, notificationTarget("/clubs", clubsEnabled = false))
+        // Everything else is unaffected.
+        assertEquals(NotificationTarget.Book("b1"), notificationTarget("/books/b1", clubsEnabled = false))
     }
 
     @Test
