@@ -36,7 +36,7 @@ val appModule = module {
     single<CoverUploader> { DeviceCoverUploader(androidContext(), get()) }
     single<Locator> { DeviceLocator(androidContext()) }
     single<CvReader> { DeviceCvReader(androidContext()) }
-    viewModel { MainViewModel(get(), get()) }
+    viewModel { MainViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get()) }
     viewModel { HomeViewModel(get()) }
     viewModel { (query: String) -> BrowseViewModel(get(), query) }

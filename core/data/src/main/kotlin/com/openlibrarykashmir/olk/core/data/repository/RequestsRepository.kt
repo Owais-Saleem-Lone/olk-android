@@ -47,6 +47,9 @@ sealed interface RequestActionOutcome {
      * right response is to reload, not to retry.
      */
     data object OutOfDate : RequestActionOutcome
+
+    /** The caller's account is suspended: they may decline, but not accept. */
+    data object Suspended : RequestActionOutcome
 }
 
 interface RequestsRepository {
@@ -104,6 +107,9 @@ sealed interface RateOutcome {
 
     /** The exchange is not (or no longer) one this person can rate. */
     data object NotAllowed : RateOutcome
+
+    /** The rater's account is suspended: no ratings until it ends. */
+    data object Suspended : RateOutcome
 }
 
 internal class SupabaseRequestsRepository(
@@ -174,7 +180,8 @@ internal class SupabaseRequestsRepository(
         } catch (e: PostgrestRestException) {
             when (e.code) {
                 UNIQUE_VIOLATION -> RateOutcome.AlreadyRated
-                INSUFFICIENT_PRIVILEGE -> RateOutcome.NotAllowed
+                INSUFFICIENT_PRIVILEGE ->
+                    if (client.refusedBecauseSuspended()) RateOutcome.Suspended else RateOutcome.NotAllowed
                 else -> throw e
             }
         }
@@ -219,7 +226,11 @@ internal class SupabaseRequestsRepository(
             }.decodeList<IdRow>()
             if (updated.isEmpty()) RequestActionOutcome.OutOfDate else RequestActionOutcome.Done
         } catch (e: PostgrestRestException) {
-            if (e.code == INSUFFICIENT_PRIVILEGE) RequestActionOutcome.OutOfDate else throw e
+            when {
+                e.code != INSUFFICIENT_PRIVILEGE -> throw e
+                client.refusedBecauseSuspended() -> RequestActionOutcome.Suspended
+                else -> RequestActionOutcome.OutOfDate
+            }
         }
 
     private suspend fun rpc(function: String, requestId: String): RequestActionOutcome =

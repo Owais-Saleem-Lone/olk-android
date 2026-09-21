@@ -121,6 +121,10 @@ class ChatViewModel(
                             restoreDraft(content)
                             _messages.send("This chat is closed, so the message wasn't sent.")
                         }
+                        SendOutcome.Suspended -> {
+                            restoreDraft(content)
+                            _messages.send("Your account is suspended, so you can't send messages until it ends.")
+                        }
                     }
                 }
                 .onFailure {

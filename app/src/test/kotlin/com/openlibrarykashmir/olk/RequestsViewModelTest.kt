@@ -227,6 +227,24 @@ class RequestsViewModelTest {
     }
 
     @Test
+    fun `a suspended rater keeps the Rate button for later and is told why`() = runTest {
+        val item = request(status = RequestStatus.RETURNED)
+        val repo = FakeRequests(incoming = listOf(item), rateOutcome = RateOutcome.Suspended)
+        val viewModel = RequestsViewModel(repo, FakeAuth())
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        viewModel.messages.test {
+            viewModel.openRating(item)
+            viewModel.submitRating(4, "")
+            advanceUntilIdle()
+            assertEquals("Your account is suspended, so you can't rate until it ends.", awaitItem())
+        }
+        // Nothing was rated, so Rate must still be there once the suspension ends.
+        assertFalse(item.id in viewModel.uiState.value.ratedRequestIds)
+    }
+
+    @Test
     fun `saving progress shows it at once and reloads when the book has gone back`() = runTest {
         val mine = request(status = RequestStatus.HANDED_OVER)
         val repo = FakeRequests(outgoing = listOf(mine))

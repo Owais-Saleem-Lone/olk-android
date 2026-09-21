@@ -108,6 +108,8 @@ class BookDetailViewModel(
                             _messages.send("This book is no longer available.")
                             load()
                         }
+                        RequestOutcome.Suspended ->
+                            _messages.send("Your account is suspended, so you can't request books until it ends.")
                     }
                 }
                 .onFailure { _messages.send(it.toUserMessage()) }

@@ -140,6 +140,8 @@ The next build without those variables points back at your usual project.
       announced in the app and by email
 - [x] Join the OLK Team — the volunteer / internship application with a CV, sent to the
       website's endpoint (which stores the CV privately and emails the team)
+- [x] Suspensions — a notice on every screen while one lasts, and the real reason when
+      the database refuses something (it enforces suspensions itself)
 - [ ] Starting a club and scheduling an event — still on the website
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 

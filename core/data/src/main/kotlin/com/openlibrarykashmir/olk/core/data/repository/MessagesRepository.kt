@@ -59,6 +59,9 @@ sealed interface SendOutcome {
      * messaging state, or the content broke `messages_content_length_check`.
      */
     data object NotAllowed : SendOutcome
+
+    /** The sender's account is suspended: no messages until it ends. */
+    data object Suspended : SendOutcome
 }
 
 interface MessagesRepository {
@@ -151,6 +154,7 @@ internal class SupabaseMessagesRepository(
             when {
                 e.error.startsWith(RATE_LIMIT_PREFIX) || e.message.orEmpty().contains(RATE_LIMIT_PREFIX) ->
                     SendOutcome.RateLimited
+                e.code == RLS_VIOLATION && client.refusedBecauseSuspended() -> SendOutcome.Suspended
                 e.code == RLS_VIOLATION || e.code == CHECK_VIOLATION -> SendOutcome.NotAllowed
                 else -> throw e
             }

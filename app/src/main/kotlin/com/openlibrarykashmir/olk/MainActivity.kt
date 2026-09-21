@@ -32,11 +32,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val authState by viewModel.authState.collectAsStateWithLifecycle()
             val featureFlags by viewModel.featureFlags.collectAsStateWithLifecycle()
+            val suspension by viewModel.suspension.collectAsStateWithLifecycle()
 
-            // An admin can flip a feature off while the app sits in the
-            // background, so re-read on every return to the foreground.
+            // An admin can flip a feature off, or suspend an account, while the
+            // app sits in the background, so re-read on every return.
             LifecycleStartEffect(Unit) {
                 viewModel.refreshFeatureFlags()
+                viewModel.refreshSuspension()
                 onStopOrDispose {}
             }
 
@@ -44,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 OlkNavHost(
                     isSignedIn = authState is AuthState.SignedIn,
                     featureFlags = featureFlags,
+                    suspension = suspension,
                 )
             }
         }

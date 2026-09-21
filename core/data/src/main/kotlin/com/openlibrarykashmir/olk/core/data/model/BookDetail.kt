@@ -71,6 +71,9 @@ sealed interface RequestOutcome {
      * prevented it (the detail screen never offers Request on your own book).
      */
     data object NoLongerAvailable : RequestOutcome
+
+    /** The viewer's account is suspended: no new requests until it ends. */
+    data object Suspended : RequestOutcome
 }
 
 /** Column subset of `public.profiles` safe for any signed-in user to read. */

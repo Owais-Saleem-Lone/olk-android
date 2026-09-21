@@ -1,9 +1,11 @@
 package com.openlibrarykashmir.olk.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -56,6 +58,8 @@ import com.openlibrarykashmir.olk.feature.profile.ProfileScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
 import com.openlibrarykashmir.olk.feature.support.SupportScreen
 import com.openlibrarykashmir.olk.feature.team.JoinTeamScreen
+import com.openlibrarykashmir.olk.ui.Suspension
+import com.openlibrarykashmir.olk.ui.SuspensionBanner
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
 import kotlin.reflect.KClass
@@ -189,6 +193,8 @@ private const val SCANNED_ISBN_KEY = "scanned_isbn"
 fun OlkNavHost(
     isSignedIn: Boolean,
     featureFlags: FeatureFlags,
+    /** Null unless the signed-in account is suspended right now. */
+    suspension: Suspension? = null,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
@@ -228,23 +234,40 @@ fun OlkNavHost(
         // outer scaffold only owns the bottom navigation.
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
-            if (showBottomBar) {
-                NavigationBar {
-                    TopLevelTab.entries.filter { it.isEnabled(featureFlags) }.forEach { tab ->
-                        NavigationBarItem(
-                            selected = destination?.hierarchy?.any { it.hasRoute(tab.routeClass) } == true,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    // Standard tab behaviour: one copy of each tab on the
-                                    // stack, and each tab keeps its own scroll and state.
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = null) },
-                            label = { Text(tab.label) },
-                        )
+            // Stacked: the suspension notice sits above the tabs.
+            Column {
+                // On every screen while it lasts, as the website's notice is -- except
+                // the two it points to, which already say it.
+                val onSuspensionPages = destination?.hasRoute(SupportRoute::class) == true ||
+                    destination?.hasRoute(ProfileRoute::class) == true
+                if (isSignedIn && suspension != null && !onSuspensionPages) {
+                    SuspensionBanner(
+                        suspension = suspension,
+                        onSeeWhy = { navController.navigate(ProfileRoute) },
+                        onContactAdmin = { navController.navigate(SupportRoute) },
+                        // With no navigation bar below it, it sits on the screen's
+                        // bottom edge and has to clear the system bar itself.
+                        modifier = if (showBottomBar) Modifier else Modifier.navigationBarsPadding(),
+                    )
+                }
+                if (showBottomBar) {
+                    NavigationBar {
+                        TopLevelTab.entries.filter { it.isEnabled(featureFlags) }.forEach { tab ->
+                            NavigationBarItem(
+                                selected = destination?.hierarchy?.any { it.hasRoute(tab.routeClass) } == true,
+                                onClick = {
+                                    navController.navigate(tab.route) {
+                                        // Standard tab behaviour: one copy of each tab on the
+                                        // stack, and each tab keeps its own scroll and state.
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = { Icon(tab.icon, contentDescription = null) },
+                                label = { Text(tab.label) },
+                            )
+                        }
                     }
                 }
             }

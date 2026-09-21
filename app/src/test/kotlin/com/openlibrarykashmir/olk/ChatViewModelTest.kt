@@ -140,6 +140,22 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `a suspended sender is told why, not that the chat is closed`() = runTest {
+        val repo = FakeMessages(sendOutcome = { SendOutcome.Suspended })
+        val viewModel = ChatViewModel("r1", repo, FakeAuth())
+        viewModel.start()
+        advanceUntilIdle()
+
+        viewModel.messages.test {
+            viewModel.onDraftChange("keep me too")
+            viewModel.send()
+            advanceUntilIdle()
+            assertEquals("Your account is suspended, so you can't send messages until it ends.", awaitItem())
+        }
+        assertEquals("keep me too", (viewModel.uiState.value as ChatUiState.Ready).draft)
+    }
+
+    @Test
     fun `nothing can be sent before a request is accepted`() = runTest {
         val repo = FakeMessages(status = RequestStatus.PENDING)
         val viewModel = ChatViewModel("r1", repo, FakeAuth())

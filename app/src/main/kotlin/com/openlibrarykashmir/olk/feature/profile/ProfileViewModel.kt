@@ -2,6 +2,8 @@ package com.openlibrarykashmir.olk.feature.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openlibrarykashmir.olk.ui.Suspension
+import com.openlibrarykashmir.olk.ui.activeSuspension
 import com.openlibrarykashmir.olk.core.data.repository.OwnProfile
 import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
 import com.openlibrarykashmir.olk.core.data.repository.ProfileUpdate
@@ -49,9 +51,6 @@ data class ProfileForm(
         )
     }
 }
-
-/** Shown at the top of the profile while an account is suspended. */
-data class Suspension(val reason: String?, val until: Instant?)
 
 sealed interface ProfileUiState {
     data object Loading : ProfileUiState
@@ -108,7 +107,7 @@ class ProfileViewModel(
                         form = form,
                         saved = form,
                         areaSuggestions = areas,
-                        suspension = suspensionOf(profile),
+                        suspension = activeSuspension(profile, now()),
                     )
                 }
             }.onFailure { _uiState.value = ProfileUiState.Error(it.toUserMessage()) }
@@ -179,14 +178,6 @@ class ProfileViewModel(
 
     fun signOut() {
         viewModelScope.launch { runCatching { auth.signOut() } }
-    }
-
-    private fun suspensionOf(profile: OwnProfile): Suspension? {
-        if (profile.isBanned != true) return null
-        val until = profile.banExpiresAt?.let { parseTimestamp(it)?.toInstant() }
-        // Same rule as the website's proxy: an expired suspension no longer applies.
-        if (until != null && until.isBefore(now())) return null
-        return Suspension(reason = profile.banReason, until = until)
     }
 
     private inline fun edit(transform: (ProfileForm) -> ProfileForm) =

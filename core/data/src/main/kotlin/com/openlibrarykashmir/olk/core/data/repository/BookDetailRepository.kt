@@ -89,7 +89,8 @@ internal class SupabaseBookDetailRepository(
                 e.code == UNIQUE_VIOLATION -> RequestOutcome.AlreadyRequested
                 e.error.startsWith(RATE_LIMIT_PREFIX) || e.message.orEmpty().contains(RATE_LIMIT_PREFIX) ->
                     RequestOutcome.DailyLimitReached
-                e.code == RLS_VIOLATION -> RequestOutcome.NoLongerAvailable
+                e.code == RLS_VIOLATION ->
+                    if (client.refusedBecauseSuspended()) RequestOutcome.Suspended else RequestOutcome.NoLongerAvailable
                 else -> throw e
             }
         }

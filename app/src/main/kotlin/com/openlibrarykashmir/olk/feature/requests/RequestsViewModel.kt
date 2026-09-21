@@ -204,7 +204,7 @@ class RequestsViewModel(
                 repository.rate(item.id, userId, rated.id, score.coerceIn(1, 5), comment.take(RequestsRepository.MAX_RATING_COMMENT))
             }.onSuccess { outcome ->
                 // Rated or already rated: either way the button should go.
-                if (outcome != RateOutcome.NotAllowed) {
+                if (outcome == RateOutcome.Rated || outcome == RateOutcome.AlreadyRated) {
                     _uiState.update { it.copy(ratedRequestIds = it.ratedRequestIds + item.id) }
                 }
                 _messages.send(
@@ -212,6 +212,7 @@ class RequestsViewModel(
                         RateOutcome.Rated -> "Thanks for rating."
                         RateOutcome.AlreadyRated -> "You have already rated this exchange."
                         RateOutcome.NotAllowed -> "This exchange can't be rated."
+                        RateOutcome.Suspended -> "Your account is suspended, so you can't rate until it ends."
                     },
                 )
             }.onFailure { _messages.send(it.toUserMessage()) }
@@ -260,6 +261,9 @@ class RequestsViewModel(
                     when (outcome) {
                         RequestActionOutcome.Done -> action.successMessage()
                         RequestActionOutcome.OutOfDate -> "This request has already changed. Showing the latest."
+                        // Declining still works; accepting does not.
+                        RequestActionOutcome.Suspended ->
+                            "Your account is suspended, so you can't accept requests. You can still decline."
                     },
                 )
                 refresh()
