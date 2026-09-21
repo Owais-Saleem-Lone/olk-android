@@ -84,7 +84,7 @@ import org.koin.androidx.compose.koinViewModel
 /**
  * The website's homepage (`src/app/page.tsx`) for signed-in readers: same copy,
  * same teal / amber / rose accents on the cream page. Clubs and events are
- * reached from the top bar; "Join the team" is left out until it reaches the app.
+ * reached from the top bar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,6 +94,7 @@ fun HomeScreen(
     onStartSharing: () -> Unit,
     onOpenClubs: () -> Unit,
     onOpenEvents: () -> Unit,
+    onJoinTeam: () -> Unit,
     /** Whether an admin has clubs switched on; see `platform_settings`. */
     clubsEnabled: Boolean = true,
     /** Events belong to clubs, so they show only when both are switched on. */
@@ -150,6 +151,7 @@ fun HomeScreen(
                         item { Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
                     }
                     items(state.feed.announcements, key = { it.id }) { AnnouncementCard(it) }
+                    item { JoinTeamCard(accents, onClick = onJoinTeam) }
                     item { Hero(accents, onSearch = onSearch, onStartSharing = onStartSharing) }
                     state.feed.stats?.takeIf { it.totalBooks + it.totalUsers + it.completedExchanges > 0 }?.let { stats ->
                         item { StatsRow(stats, accents) }
@@ -230,6 +232,37 @@ private fun WhiteCard(modifier: Modifier = Modifier, content: @Composable () -> 
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     ) { content() }
+}
+
+/** The homepage's "Join the OLK Team" card, in the same place as on the website. */
+@Composable
+private fun JoinTeamCard(accents: HomeAccents, onClick: () -> Unit) {
+    WhiteCard(modifier = Modifier.clickable(onClick = onClick)) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(accents.tealTint),
+                contentAlignment = Alignment.Center,
+            ) { Text("🤝", fontSize = 20.sp) }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "VOLUNTEER & INTERNSHIP",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text("Join the OLK Team", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Students, teachers & developers — volunteer, intern, or help build OLK.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apply now", tint = accents.teal)
+        }
+    }
 }
 
 @Composable

@@ -54,6 +54,8 @@ import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
 import com.openlibrarykashmir.olk.feature.people.UserProfileScreen
 import com.openlibrarykashmir.olk.feature.profile.ProfileScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
+import com.openlibrarykashmir.olk.feature.support.SupportScreen
+import com.openlibrarykashmir.olk.feature.team.JoinTeamScreen
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
 import kotlin.reflect.KClass
@@ -115,6 +117,13 @@ data class ClubDetailRoute(val clubId: String)
 @Serializable
 data object EventsRoute
 
+/** "Contact Admin": the member's private thread with the admin team. */
+@Serializable
+data object SupportRoute
+
+@Serializable
+data object JoinTeamRoute
+
 @Serializable
 data class EventDetailRoute(val eventId: String)
 
@@ -149,6 +158,8 @@ private fun NavHostController.openNotificationTarget(target: NotificationTarget)
         NotificationTarget.Clubs -> navigate(ClubsRoute)
         is NotificationTarget.Event -> navigate(EventDetailRoute(target.eventId))
         NotificationTarget.Events -> navigate(EventsRoute)
+        NotificationTarget.Support -> navigate(SupportRoute)
+        NotificationTarget.JoinTeam -> navigate(JoinTeamRoute)
         is NotificationTarget.Chat -> navigate(ChatRoute(target.requestId))
         NotificationTarget.Requests -> navigateToTab(RequestsRoute)
         NotificationTarget.Messages -> navigateToTab(MessagesRoute)
@@ -259,6 +270,7 @@ fun OlkNavHost(
                     onStartSharing = { navController.navigateToTab(MyBooksRoute) },
                     onOpenClubs = { navController.navigate(ClubsRoute) },
                     onOpenEvents = { navController.navigate(EventsRoute) },
+                    onJoinTeam = { navController.navigate(JoinTeamRoute) },
                     clubsEnabled = featureFlags.clubs,
                     eventsEnabled = featureFlags.events,
                     actions = bell,
@@ -330,7 +342,17 @@ fun OlkNavHost(
                 )
             }
             composable<ProfileRoute> {
-                ProfileScreen(onBack = { navController.popBackStack() })
+                ProfileScreen(
+                    onBack = { navController.popBackStack() },
+                    onContactAdmin = { navController.navigate(SupportRoute) },
+                    onJoinTeam = { navController.navigate(JoinTeamRoute) },
+                )
+            }
+            composable<SupportRoute> {
+                SupportScreen(onBack = { navController.popBackStack() })
+            }
+            composable<JoinTeamRoute> {
+                JoinTeamScreen(onBack = { navController.popBackStack() })
             }
             composable<NotificationsRoute> {
                 NotificationsScreen(

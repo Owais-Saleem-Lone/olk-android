@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,6 +63,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ProfileScreen(
     onBack: () -> Unit,
+    onContactAdmin: () -> Unit,
+    onJoinTeam: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
@@ -111,6 +114,8 @@ fun ProfileScreen(
                     viewModel = viewModel,
                     onShareLocation = { locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
                     onSignOut = { confirmSignOut = true },
+                    onContactAdmin = onContactAdmin,
+                    onJoinTeam = onJoinTeam,
                 )
             }
         }
@@ -139,6 +144,8 @@ private fun ProfileFields(
     viewModel: ProfileViewModel,
     onShareLocation: () -> Unit,
     onSignOut: () -> Unit,
+    onContactAdmin: () -> Unit,
+    onJoinTeam: () -> Unit,
 ) {
     val form = state.form
     Column(
@@ -149,7 +156,7 @@ private fun ProfileFields(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        state.suspension?.let { SuspensionCard(it) }
+        state.suspension?.let { SuspensionCard(it, onContactAdmin) }
 
         OutlinedTextField(
             value = form.displayName,
@@ -225,6 +232,10 @@ private fun ProfileFields(
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // The website's sidebar has these two under the account menu.
+        OutlinedButton(onClick = onContactAdmin, modifier = Modifier.fillMaxWidth()) { Text("🛟  Contact Admin") }
+        OutlinedButton(onClick = onJoinTeam, modifier = Modifier.fillMaxWidth()) { Text("🤝  Join the OLK Team") }
 
         OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -323,7 +334,7 @@ private fun LocationCard(hasLocation: Boolean, isLocating: Boolean, onShare: () 
 private val DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 
 @Composable
-private fun SuspensionCard(suspension: Suspension) {
+private fun SuspensionCard(suspension: Suspension, onContactAdmin: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -340,11 +351,10 @@ private fun SuspensionCard(suspension: Suspension) {
             suspension.reason?.takeIf { it.isNotBlank() }?.let {
                 Text("Reason: $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
             }
-            Text(
-                "Questions? Use Contact Admin on the website.",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp),
-            )
+            // The way to appeal: Contact Admin stays open to a suspended member.
+            TextButton(onClick = onContactAdmin, contentPadding = PaddingValues(0.dp)) {
+                Text("Questions or an appeal? Contact Admin")
+            }
         }
     }
 }

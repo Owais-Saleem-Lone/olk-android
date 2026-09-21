@@ -20,6 +20,7 @@ class OlkApplication : Application() {
                 dataModule(
                     supabaseUrl = BuildConfig.SUPABASE_URL,
                     supabaseAnonKey = BuildConfig.SUPABASE_ANON_KEY,
+                    websiteUrl = BuildConfig.WEBSITE_URL,
                 ),
                 appModule,
             )

@@ -136,6 +136,10 @@ The next build without those variables points back at your usual project.
 - [x] Clubs — browse, request to join, the owner's approvals, members-only chat, ratings
 - [x] Events — browse, RSVP, the joining link for those going, who's going, add to
       calendar, the organiser's cancel; a club's upcoming events on its page
+- [x] Contact Admin — the private thread with the admin team, live, with replies
+      announced in the app and by email
+- [x] Join the OLK Team — the volunteer / internship application with a CV, sent to the
+      website's endpoint (which stores the CV privately and emails the team)
 - [ ] Starting a club and scheduling an event — still on the website
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 

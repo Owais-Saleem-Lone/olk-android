@@ -270,6 +270,13 @@ class NotificationsViewModelTest {
     }
 
     @Test
+    fun `an admin team reply opens Contact Admin in the app`() {
+        // What trg_notify_support_reply writes.
+        assertEquals(NotificationTarget.Support, notificationTarget("/support"))
+        assertEquals(NotificationTarget.JoinTeam, notificationTarget("/join-team"))
+    }
+
+    @Test
     fun `event links open the event in the app`() {
         // What trg_notify_club_event_created writes.
         assertEquals(NotificationTarget.Event("e1"), notificationTarget("/events/e1"))

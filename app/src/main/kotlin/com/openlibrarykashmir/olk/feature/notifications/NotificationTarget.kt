@@ -18,6 +18,7 @@ val NOTIFICATION_ICONS: Map<String, String> = mapOf(
     "event_created" to "📅",
     "club_request_approved" to "🎉",
     "club_request_rejected" to "ℹ️",
+    "admin_message" to "🛟",
 )
 
 const val FALLBACK_NOTIFICATION_ICON = "🔔"
@@ -33,6 +34,8 @@ sealed interface NotificationTarget {
     data object Clubs : NotificationTarget
     data class Event(val eventId: String) : NotificationTarget
     data object Events : NotificationTarget
+    data object Support : NotificationTarget
+    data object JoinTeam : NotificationTarget
 
     /** Nowhere to go — the notification is its own content. Just mark it read. */
     data object None : NotificationTarget
@@ -82,6 +85,9 @@ fun notificationTarget(
         // event_created links to the event itself.
         segments.size == 2 && segments[0] == "events" -> NotificationTarget.Event(segments[1])
         segments.size == 1 && segments[0] == "events" -> NotificationTarget.Events
+        // admin_message: a reply from the admin team.
+        segments[0] == "support" -> NotificationTarget.Support
+        segments[0] == "join-team" -> NotificationTarget.JoinTeam
         segments[0] == "requests" -> NotificationTarget.Requests
         segments[0] == "my-books" -> NotificationTarget.MyBooks
         segments[0] == "messages" && !messagingEnabled -> NotificationTarget.MessagingOff

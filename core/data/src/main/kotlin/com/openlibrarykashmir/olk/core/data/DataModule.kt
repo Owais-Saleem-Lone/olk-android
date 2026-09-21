@@ -22,6 +22,10 @@ import com.openlibrarykashmir.olk.core.data.repository.SupabaseMessagesRepositor
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseHomeRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseClubsRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseEventsRepository
+import com.openlibrarykashmir.olk.core.data.repository.SupabaseSupportRepository
+import com.openlibrarykashmir.olk.core.data.repository.SupportRepository
+import com.openlibrarykashmir.olk.core.data.repository.TeamApplicationRepository
+import com.openlibrarykashmir.olk.core.data.repository.WebsiteTeamApplicationRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseListsRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseMyBooksRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabasePeopleRepository
@@ -43,11 +47,11 @@ import org.koin.dsl.module
 /**
  * Wiring for the data layer.
  *
- * The URL and key are passed in rather than read from `BuildConfig` here, because
+ * The URLs and key are passed in rather than read from `BuildConfig` here, because
  * `BuildConfig` belongs to the app module — keeping this module ignorant of it is
  * what lets tests point the same graph at a local Supabase stack.
  */
-fun dataModule(supabaseUrl: String, supabaseAnonKey: String) = module {
+fun dataModule(supabaseUrl: String, supabaseAnonKey: String, websiteUrl: String) = module {
     single<SupabaseClient> {
         SupabaseClientFactory.create(
             supabaseUrl = supabaseUrl,
@@ -68,8 +72,10 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String) = module {
     single<PeopleRepository> { SupabasePeopleRepository(get()) }
     single<ClubsRepository> { SupabaseClubsRepository(get()) }
     single<EventsRepository> { SupabaseEventsRepository(get()) }
+    single<SupportRepository> { SupabaseSupportRepository(get()) }
 
-    // Open Library (ISBN lookup) is the only call that does not go to Supabase.
+    // The two calls that do not go to Supabase: Open Library (ISBN lookup), and
+    // the website's team-application endpoint, which takes the CV upload.
     single {
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
@@ -82,4 +88,5 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String) = module {
         }
     }
     single<IsbnLookupRepository> { OpenLibraryIsbnRepository(get()) }
+    single<TeamApplicationRepository> { WebsiteTeamApplicationRepository(get(), get(), websiteUrl) }
 }

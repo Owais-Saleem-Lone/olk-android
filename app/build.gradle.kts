@@ -42,6 +42,8 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"${secret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${secret("SUPABASE_ANON_KEY")}\"")
+        // Only the team-application upload goes to the website itself.
+        buildConfigField("String", "WEBSITE_URL", "\"${secret("WEBSITE_URL")}\"")
     }
 
     buildTypes {

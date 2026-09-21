@@ -24,6 +24,10 @@ import com.openlibrarykashmir.olk.feature.profile.DeviceLocator
 import com.openlibrarykashmir.olk.feature.profile.Locator
 import com.openlibrarykashmir.olk.feature.profile.ProfileViewModel
 import com.openlibrarykashmir.olk.feature.requests.RequestsViewModel
+import com.openlibrarykashmir.olk.feature.support.SupportViewModel
+import com.openlibrarykashmir.olk.feature.team.CvReader
+import com.openlibrarykashmir.olk.feature.team.DeviceCvReader
+import com.openlibrarykashmir.olk.feature.team.JoinTeamViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -31,6 +35,7 @@ import org.koin.dsl.module
 val appModule = module {
     single<CoverUploader> { DeviceCoverUploader(androidContext(), get()) }
     single<Locator> { DeviceLocator(androidContext()) }
+    single<CvReader> { DeviceCvReader(androidContext()) }
     viewModel { MainViewModel(get(), get()) }
     viewModel { AuthViewModel(get()) }
     viewModel { HomeViewModel(get()) }
@@ -50,5 +55,7 @@ val appModule = module {
     viewModel { ClubsViewModel(get(), get()) }
     viewModel { (clubId: String) -> ClubDetailViewModel(clubId, get(), get(), get()) }
     viewModel { EventsViewModel(get()) }
+    viewModel { SupportViewModel(get(), get()) }
+    viewModel { JoinTeamViewModel(get(), get(), get(), get()) }
     viewModel { (eventId: String) -> EventDetailViewModel(eventId, get(), get(), get()) }
 }
