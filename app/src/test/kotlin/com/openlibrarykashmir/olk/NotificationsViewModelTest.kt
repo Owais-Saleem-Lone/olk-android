@@ -246,9 +246,9 @@ class NotificationsViewModelTest {
     @Test
     fun `links the app has no screen for say so instead of doing nothing`() {
         assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/profile"))
-        assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/events/e1"))
-        // The website's club-request form has no screen here either.
+        // The website's club-request and event-creation forms have no screen here either.
         assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/clubs/create"))
+        assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/clubs/c1/events/create"))
         // The list itself, or no link at all: already there, nothing to open.
         assertEquals(NotificationTarget.None, notificationTarget("/notifications"))
         assertEquals(NotificationTarget.None, notificationTarget(null))
@@ -267,6 +267,22 @@ class NotificationsViewModelTest {
         assertEquals(NotificationTarget.ClubsOff, notificationTarget("/clubs", clubsEnabled = false))
         // Everything else is unaffected.
         assertEquals(NotificationTarget.Book("b1"), notificationTarget("/books/b1", clubsEnabled = false))
+    }
+
+    @Test
+    fun `event links open the event in the app`() {
+        // What trg_notify_club_event_created writes.
+        assertEquals(NotificationTarget.Event("e1"), notificationTarget("/events/e1"))
+        assertEquals(NotificationTarget.Events, notificationTarget("/events"))
+    }
+
+    @Test
+    fun `event links do not open while events, or the clubs they belong to, are switched off`() {
+        assertEquals(NotificationTarget.EventsOff, notificationTarget("/events/e1", eventsEnabled = false))
+        assertEquals(NotificationTarget.EventsOff, notificationTarget("/events", eventsEnabled = false))
+        assertEquals(NotificationTarget.EventsOff, notificationTarget("/events/e1", clubsEnabled = false))
+        // Everything else is unaffected.
+        assertEquals(NotificationTarget.Club("c1"), notificationTarget("/clubs/c1", eventsEnabled = false))
     }
 
     @Test

@@ -50,6 +50,7 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel,
     messagingEnabled: Boolean,
     clubsEnabled: Boolean,
+    eventsEnabled: Boolean,
     onOpen: (NotificationTarget) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -103,7 +104,7 @@ fun NotificationsScreen(
                             notification = notification,
                             onClick = {
                                 viewModel.markRead(notification)
-                                val target = notificationTarget(notification.link, messagingEnabled, clubsEnabled)
+                                val target = notificationTarget(notification.link, messagingEnabled, clubsEnabled, eventsEnabled)
                                 when (target) {
                                     NotificationTarget.None -> Unit
                                     NotificationTarget.WebsiteOnly -> scope.launch {
@@ -119,6 +120,11 @@ fun NotificationsScreen(
                                     NotificationTarget.ClubsOff -> scope.launch {
                                         snackbarHostState.showSnackbar(
                                             "Clubs are switched off at the moment.",
+                                        )
+                                    }
+                                    NotificationTarget.EventsOff -> scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            "Events are switched off at the moment.",
                                         )
                                     }
                                     else -> onOpen(target)

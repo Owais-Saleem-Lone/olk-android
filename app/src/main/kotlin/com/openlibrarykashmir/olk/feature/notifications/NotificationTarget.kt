@@ -31,11 +31,13 @@ sealed interface NotificationTarget {
     data object MyBooks : NotificationTarget
     data class Club(val clubId: String) : NotificationTarget
     data object Clubs : NotificationTarget
+    data class Event(val eventId: String) : NotificationTarget
+    data object Events : NotificationTarget
 
     /** Nowhere to go — the notification is its own content. Just mark it read. */
     data object None : NotificationTarget
 
-    /** A page the app does not have yet: profile, events. */
+    /** A page the app does not have yet, such as the club-request form. */
     data object WebsiteOnly : NotificationTarget
 
     /** Messaging exists in the app but an admin has switched the feature off. */
@@ -43,6 +45,9 @@ sealed interface NotificationTarget {
 
     /** Clubs exist in the app but an admin has switched the feature off. */
     data object ClubsOff : NotificationTarget
+
+    /** Events exist in the app but an admin has switched events (or clubs) off. */
+    data object EventsOff : NotificationTarget
 }
 
 /**
@@ -57,6 +62,7 @@ fun notificationTarget(
     link: String?,
     messagingEnabled: Boolean = true,
     clubsEnabled: Boolean = true,
+    eventsEnabled: Boolean = true,
 ): NotificationTarget {
     val path = link?.trim()?.substringBefore('?')?.trimEnd('/').orEmpty()
     if (path.isEmpty() || path == "/notifications") return NotificationTarget.None
@@ -71,6 +77,11 @@ fun notificationTarget(
         segments.size == 2 && segments[0] == "clubs" && segments[1] != "create" ->
             NotificationTarget.Club(segments[1])
         segments.size == 1 && segments[0] == "clubs" -> NotificationTarget.Clubs
+        // Events belong to clubs, so switching clubs off hides them as well.
+        segments[0] == "events" && !(eventsEnabled && clubsEnabled) -> NotificationTarget.EventsOff
+        // event_created links to the event itself.
+        segments.size == 2 && segments[0] == "events" -> NotificationTarget.Event(segments[1])
+        segments.size == 1 && segments[0] == "events" -> NotificationTarget.Events
         segments[0] == "requests" -> NotificationTarget.Requests
         segments[0] == "my-books" -> NotificationTarget.MyBooks
         segments[0] == "messages" && !messagingEnabled -> NotificationTarget.MessagingOff

@@ -49,9 +49,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.openlibrarykashmir.olk.core.data.model.Club
+import com.openlibrarykashmir.olk.core.data.model.ClubEvent
 import com.openlibrarykashmir.olk.core.data.model.ClubMember
 import com.openlibrarykashmir.olk.core.data.model.ClubPost
 import com.openlibrarykashmir.olk.core.data.model.MembershipStatus
+import com.openlibrarykashmir.olk.feature.events.MembersOnlyLabel
+import com.openlibrarykashmir.olk.feature.events.eventPlace
+import com.openlibrarykashmir.olk.feature.events.eventWhenShort
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -61,7 +65,10 @@ fun ClubDetailScreen(
     clubId: String,
     onBack: () -> Unit,
     onMemberClick: (String) -> Unit,
+    onEventClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Whether an admin has events switched on; see `platform_settings`. */
+    eventsEnabled: Boolean = true,
     viewModel: ClubDetailViewModel = koinViewModel { parametersOf(clubId) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -140,6 +147,27 @@ fun ClubDetailScreen(
                             onReject = { viewModel.reject(applicant.userId) },
                             onClick = { onMemberClick(applicant.userId) },
                         )
+                    }
+                }
+
+                if (eventsEnabled) {
+                    item { Text("Upcoming events", style = MaterialTheme.typography.titleMedium) }
+                    if (state.events.isEmpty()) {
+                        item {
+                            Text(
+                                text = if (state.isOwner) {
+                                    "No upcoming events. Events are scheduled on the website for now."
+                                } else {
+                                    "No upcoming events yet."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    } else {
+                        items(state.events, key = { "event-${it.id}" }) { event ->
+                            ClubEventCard(event = event, onClick = { onEventClick(event.id) })
+                        }
                     }
                 }
 
@@ -229,6 +257,25 @@ fun ClubDetailScreen(
                 TextButton(onClick = { confirmingLeave = false }) { Text("Cancel") }
             },
         )
+    }
+}
+
+@Composable
+private fun ClubEventCard(event: ClubEvent, onClick: () -> Unit) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (event.isMembersOnly) MembersOnlyLabel()
+            Text(event.title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = listOf(
+                    eventWhenShort(event.startsAt),
+                    eventPlace(event.isOnline, event.locationName),
+                    "${event.attendeeCount} going",
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

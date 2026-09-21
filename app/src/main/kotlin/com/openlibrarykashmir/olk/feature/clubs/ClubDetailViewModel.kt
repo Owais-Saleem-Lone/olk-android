@@ -3,10 +3,12 @@ package com.openlibrarykashmir.olk.feature.clubs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openlibrarykashmir.olk.core.data.model.Club
+import com.openlibrarykashmir.olk.core.data.model.ClubEvent
 import com.openlibrarykashmir.olk.core.data.model.ClubMember
 import com.openlibrarykashmir.olk.core.data.model.ClubPost
 import com.openlibrarykashmir.olk.core.data.model.MembershipStatus
 import com.openlibrarykashmir.olk.core.data.repository.ClubsRepository
+import com.openlibrarykashmir.olk.core.data.repository.EventsRepository
 import com.openlibrarykashmir.olk.core.data.repository.PostOutcome
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
 import kotlinx.coroutines.CancellationException
@@ -24,6 +26,8 @@ data class ClubDetailUiState(
     val members: List<ClubMember> = emptyList(),
     val applicants: List<ClubMember> = emptyList(),
     val posts: List<ClubPost> = emptyList(),
+    /** Upcoming events are public, like the website's club page: no membership needed. */
+    val events: List<ClubEvent> = emptyList(),
     val draft: String = "",
     val isSending: Boolean = false,
     val myScore: Int = 0,
@@ -42,6 +46,7 @@ data class ClubDetailUiState(
 class ClubDetailViewModel(
     private val clubId: String,
     private val clubs: ClubsRepository,
+    private val events: EventsRepository,
     private val auth: AuthRepository,
 ) : ViewModel() {
 
@@ -195,6 +200,8 @@ class ClubDetailViewModel(
                     // there without a second trip.
                     applicants = if (isOwner) clubs.pendingApplicants(clubId) else emptyList(),
                     posts = if (canSeeChat) clubs.posts(clubId) else emptyList(),
+                    // A failure here costs only the events section, never the club.
+                    events = if (club != null) runCatching { events.clubEvents(clubId) }.getOrDefault(emptyList()) else emptyList(),
                     myScore = rating?.score ?: 0,
                     myComment = rating?.comment.orEmpty(),
                     isLoading = false,

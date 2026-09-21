@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Search
@@ -82,8 +83,8 @@ import org.koin.androidx.compose.koinViewModel
 
 /**
  * The website's homepage (`src/app/page.tsx`) for signed-in readers: same copy,
- * same teal / amber / rose accents on the cream page. Clubs, events and "Join the
- * team" are left out until those features reach the app.
+ * same teal / amber / rose accents on the cream page. Clubs and events are
+ * reached from the top bar; "Join the team" is left out until it reaches the app.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,8 +93,11 @@ fun HomeScreen(
     onBookClick: (String) -> Unit,
     onStartSharing: () -> Unit,
     onOpenClubs: () -> Unit,
+    onOpenEvents: () -> Unit,
     /** Whether an admin has clubs switched on; see `platform_settings`. */
     clubsEnabled: Boolean = true,
+    /** Events belong to clubs, so they show only when both are switched on. */
+    eventsEnabled: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
@@ -117,6 +121,11 @@ fun HomeScreen(
                     if (clubsEnabled) {
                         IconButton(onClick = onOpenClubs) {
                             Icon(Icons.Default.Groups, contentDescription = "Clubs")
+                        }
+                    }
+                    if (clubsEnabled && eventsEnabled) {
+                        IconButton(onClick = onOpenEvents) {
+                            Icon(Icons.Default.Event, contentDescription = "Events")
                         }
                     }
                     actions()

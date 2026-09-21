@@ -2,6 +2,7 @@ package com.openlibrarykashmir.olk
 
 import com.openlibrarykashmir.olk.core.data.model.BrowseClub
 import com.openlibrarykashmir.olk.core.data.model.Club
+import com.openlibrarykashmir.olk.core.data.model.ClubEvent
 import com.openlibrarykashmir.olk.core.data.model.ClubMember
 import com.openlibrarykashmir.olk.core.data.model.ClubPost
 import com.openlibrarykashmir.olk.core.data.model.ClubRating
@@ -210,7 +211,7 @@ class ClubsViewModelsTest {
             roster = listOf(ClubMember("m1", "Aamir", null, null)),
             chat = listOf(ClubPost("p1", "m1", "Aamir", "hello", null)),
         )
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -231,7 +232,7 @@ class ClubsViewModelsTest {
             chat = listOf(ClubPost("p1", "m1", "Aamir", "hello", null)),
             rating = ClubRating(score = 4, comment = "good club"),
         )
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -252,7 +253,7 @@ class ClubsViewModelsTest {
             membership = MembershipStatus.NONE,
             applicants = listOf(ClubMember("u2", "Nusrat", null, null)),
         )
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -267,7 +268,7 @@ class ClubsViewModelsTest {
             detail = detail("a", creator = "me"),
             applicants = listOf(ClubMember("u2", "Nusrat", null, null)),
         )
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         viewModel.approve("u2")
@@ -280,7 +281,7 @@ class ClubsViewModelsTest {
     @Test
     fun `sending a message clears the box and reloads the chat`() = runTest {
         val clubs = FakeClubs(detail = detail("a", creator = "me"))
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         viewModel.onDraftChange("  hello club  ")
@@ -298,7 +299,7 @@ class ClubsViewModelsTest {
             detail = detail("a", creator = "me"),
             postOutcome = PostOutcome.RateLimited,
         )
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         viewModel.onDraftChange("one too many")
@@ -313,7 +314,7 @@ class ClubsViewModelsTest {
     @Test
     fun `rating sends the comment with the stars and remembers the score`() = runTest {
         val clubs = FakeClubs(detail = detail("a", creator = "me"))
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         viewModel.onCommentChange("lovely people")
@@ -327,7 +328,7 @@ class ClubsViewModelsTest {
     @Test
     fun `a rating comment cannot exceed what the database accepts`() = runTest {
         val clubs = FakeClubs(detail = detail("a", creator = "me"))
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         viewModel.onCommentChange("x".repeat(ClubsRepository.MAX_COMMENT_LENGTH + 50))
@@ -342,7 +343,7 @@ class ClubsViewModelsTest {
             membership = MembershipStatus.APPROVED,
             chat = listOf(ClubPost("p1", "m1", "Aamir", "hello", null)),
         )
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.canSeeChat)
 
@@ -358,7 +359,7 @@ class ClubsViewModelsTest {
 
     @Test
     fun `a club that is gone says so instead of showing an empty page`() = runTest {
-        val viewModel = ClubDetailViewModel("a", FakeClubs(detail = null), FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", FakeClubs(detail = null), FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.notFound)
@@ -368,7 +369,7 @@ class ClubsViewModelsTest {
     @Test
     fun `a refresh keeps a half-typed message`() = runTest {
         val clubs = FakeClubs(detail = detail("a", creator = "me"))
-        val viewModel = ClubDetailViewModel("a", clubs, FakeAuth("me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
         advanceUntilIdle()
 
         viewModel.onDraftChange("half written")
@@ -376,5 +377,28 @@ class ClubsViewModelsTest {
         advanceUntilIdle()
 
         assertEquals("half written", viewModel.uiState.value.draft)
+    }
+
+    @Test
+    fun `a club's upcoming events show to non-members too, as on the website`() = runTest {
+        val clubs = FakeClubs(detail = detail("a", creator = "someone-else"), membership = MembershipStatus.NONE)
+        val events = FakeEvents(forClub = listOf(ClubEvent("e1", "Reading circle", "2030-01-01T10:00:00+00:00")))
+        val viewModel = ClubDetailViewModel("a", clubs, events, FakeAuth("me"))
+        advanceUntilIdle()
+
+        assertEquals(listOf("e1"), viewModel.uiState.value.events.map { it.id })
+    }
+
+    @Test
+    fun `a failure loading events costs only the events section, not the club`() = runTest {
+        val clubs = FakeClubs(detail = detail("a", creator = "me"))
+        val events = FakeEvents(failClubEvents = IllegalStateException("boom"))
+        val viewModel = ClubDetailViewModel("a", clubs, events, FakeAuth("me"))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("a", state.club?.id)
+        assertTrue(state.events.isEmpty())
+        assertNull(state.error)
     }
 }

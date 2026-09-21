@@ -133,25 +133,23 @@ The next build without those variables points back at your usual project.
       digest, suspension notice, sign out
 - [x] Saved books and wishlist (tabs in My Books; wishlist follows the `feature_wishlists` flag)
 - [x] Public profiles, ratings, reading progress and "Books you're reading" in My Books
+- [x] Clubs — browse, request to join, the owner's approvals, members-only chat, ratings
+- [x] Events — browse, RSVP, the joining link for those going, who's going, add to
+      calendar, the organiser's cancel; a club's upcoming events on its page
+- [ ] Starting a club and scheduling an event — still on the website
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**
 
 These are places where the web app does something the phone currently cannot:
 
-1. **Club notification emails** still go through a Next.js server action
-   (`src/lib/notifications.ts`), which a native client cannot invoke. Book requests,
-   chat messages and wishlist matches are already solved: database triggers create
-   the notification and pg_net posts it to the web app for delivery, so the app gets
-   emails for free. Clubs need moving the same way before they reach the app.
-2. **Push has no backend.** Needs a `device_tokens` table plus something that calls
+1. **Push has no backend.** Needs a `device_tokens` table plus something that calls
    FCM when a notification row is inserted.
 
 **Later**
 
 - Offline cache (Room) — matters more here than in most apps, given network
   conditions in the region
-- Clubs and events
 - F-Droid release alongside Play
 
 ## Contributing
