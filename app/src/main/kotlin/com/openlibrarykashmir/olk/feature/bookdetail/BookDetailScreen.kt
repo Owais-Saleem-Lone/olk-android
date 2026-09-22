@@ -28,16 +28,23 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -49,9 +56,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
@@ -66,6 +77,7 @@ import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookCondition
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import com.openlibrarykashmir.olk.core.data.model.OwnerSummary
+import com.openlibrarykashmir.olk.core.data.model.ReportReason
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -120,6 +132,9 @@ fun BookDetailScreen(
                             )
                         }
                     }
+                    if (content != null && content.canReport) {
+                        BookMenu(onReport = viewModel::openReport)
+                    }
                 },
             )
         },
@@ -153,6 +168,100 @@ fun BookDetailScreen(
             }
         }
     }
+
+    if (content?.isReportOpen == true) {
+        ReportDialog(
+            bookTitle = content.detail.book.title,
+            isSending = content.isReporting,
+            onDismiss = viewModel::dismissReport,
+            onSend = viewModel::report,
+        )
+    }
+}
+
+@Composable
+private fun BookMenu(onReport: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(Icons.Default.MoreVert, contentDescription = "More")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Report this book") },
+                onClick = {
+                    expanded = false
+                    onReport()
+                },
+            )
+        }
+    }
+}
+
+/** The website's report modal: one of five reasons, optional details. */
+@Composable
+private fun ReportDialog(
+    bookTitle: String,
+    isSending: Boolean,
+    onDismiss: () -> Unit,
+    onSend: (ReportReason, String) -> Unit,
+) {
+    var reason by remember { mutableStateOf<ReportReason?>(null) }
+    var details by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = { if (!isSending) onDismiss() },
+        title = { Text("Report this book") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = bookTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                ReportReason.entries.forEach { option ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = reason == option,
+                                enabled = !isSending,
+                                onClick = { reason = option },
+                            )
+                            .padding(vertical = 2.dp),
+                    ) {
+                        RadioButton(
+                            selected = reason == option,
+                            onClick = { reason = option },
+                            enabled = !isSending,
+                        )
+                        Text(option.label, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                OutlinedTextField(
+                    value = details,
+                    onValueChange = { if (it.length <= ReportReason.DETAILS_MAX) details = it },
+                    label = { Text("Anything else? (optional)") },
+                    enabled = !isSending,
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { reason?.let { onSend(it, details) } },
+                enabled = reason != null && !isSending,
+            ) {
+                Text(if (isSending) "Sending..." else "Send report")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSending) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openlibrarykashmir.olk.core.data.model.BookDetail
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
+import com.openlibrarykashmir.olk.core.data.model.ReportOutcome
+import com.openlibrarykashmir.olk.core.data.model.ReportReason
 import com.openlibrarykashmir.olk.core.data.model.RequestOutcome
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import com.openlibrarykashmir.olk.core.data.repository.BookDetailRepository
@@ -24,6 +26,8 @@ sealed interface BookDetailUiState {
     data class Content(
         val detail: BookDetail,
         val isRequesting: Boolean = false,
+        val isReportOpen: Boolean = false,
+        val isReporting: Boolean = false,
     ) : BookDetailUiState {
         val primaryAction: PrimaryAction
             get() {
@@ -40,6 +44,10 @@ sealed interface BookDetailUiState {
         /** Saving is offered only where the web offers it: someone else's available book. */
         val canSave: Boolean
             get() = !detail.isOwnBook && detail.book.status == BookStatus.AVAILABLE
+
+        /** As on the website: any book but your own. */
+        val canReport: Boolean
+            get() = !detail.isOwnBook
     }
 }
 
@@ -129,6 +137,41 @@ class BookDetailViewModel(
             runCatching { repository.setSaved(bookId, viewerId, target) }
                 .onFailure {
                     updateContent { it.copy(detail = it.detail.copy(isSaved = !target)) }
+                    _messages.send(it.toUserMessage())
+                }
+        }
+    }
+
+    fun openReport() = updateContent { if (it.canReport) it.copy(isReportOpen = true) else it }
+
+    fun dismissReport() = updateContent { if (it.isReporting) it else it.copy(isReportOpen = false) }
+
+    fun report(reason: ReportReason, details: String) {
+        val content = _uiState.value as? BookDetailUiState.Content ?: return
+        if (content.isReporting || !content.canReport) return
+        val viewerId = auth.currentUserId() ?: return
+
+        viewModelScope.launch {
+            updateContent { it.copy(isReporting = true) }
+            runCatching { repository.report(bookId, viewerId, reason, details) }
+                .onSuccess { outcome ->
+                    // Every answer but a failure closes the dialog: there is
+                    // nothing more the member can do with it.
+                    updateContent { it.copy(isReporting = false, isReportOpen = false) }
+                    _messages.send(
+                        when (outcome) {
+                            ReportOutcome.Sent -> "Thanks. The OLK team will review your report."
+                            ReportOutcome.AlreadyReported ->
+                                "You've already reported this book, and it's waiting for review."
+                            ReportOutcome.DailyLimitReached ->
+                                "You've sent a lot of reports today. Please try again tomorrow."
+                            ReportOutcome.Suspended ->
+                                "Your account is suspended, so you can't send reports until it ends."
+                        },
+                    )
+                }
+                .onFailure {
+                    updateContent { it.copy(isReporting = false) }
                     _messages.send(it.toUserMessage())
                 }
         }

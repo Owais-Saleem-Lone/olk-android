@@ -4,6 +4,8 @@ import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookDetail
 import com.openlibrarykashmir.olk.core.data.model.IdRow
 import com.openlibrarykashmir.olk.core.data.model.ProgressRow
+import com.openlibrarykashmir.olk.core.data.model.ReportOutcome
+import com.openlibrarykashmir.olk.core.data.model.ReportReason
 import com.openlibrarykashmir.olk.core.data.model.RequestOutcome
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import com.openlibrarykashmir.olk.core.data.model.RequestStatusRow
@@ -23,6 +25,8 @@ interface BookDetailRepository {
     suspend fun requestBook(bookId: String, requesterId: String): RequestOutcome
 
     suspend fun setSaved(bookId: String, userId: String, saved: Boolean)
+
+    suspend fun report(bookId: String, reporterId: String, reason: ReportReason, details: String?): ReportOutcome
 }
 
 internal class SupabaseBookDetailRepository(
@@ -118,6 +122,34 @@ internal class SupabaseBookDetailRepository(
             }
         }
     }
+
+    override suspend fun report(
+        bookId: String,
+        reporterId: String,
+        reason: ReportReason,
+        details: String?,
+    ): ReportOutcome =
+        try {
+            // Only these columns are writable; the database fills in whom the
+            // report is about (the book's owner), its status and its date.
+            client.from("reports").insert(
+                buildJsonObject {
+                    put("reporter_id", reporterId)
+                    put("reported_book_id", bookId)
+                    put("reason", reason.label)
+                    put("details", details?.trim()?.takeIf { it.isNotEmpty() }?.take(ReportReason.DETAILS_MAX))
+                },
+            )
+            ReportOutcome.Sent
+        } catch (e: PostgrestRestException) {
+            when {
+                e.code == UNIQUE_VIOLATION -> ReportOutcome.AlreadyReported
+                e.error.startsWith(RATE_LIMIT_PREFIX) || e.message.orEmpty().contains(RATE_LIMIT_PREFIX) ->
+                    ReportOutcome.DailyLimitReached
+                e.code == RLS_VIOLATION && client.refusedBecauseSuspended() -> ReportOutcome.Suspended
+                else -> throw e
+            }
+        }
 
     private companion object {
         val ACTIVE_REQUEST_STATUSES = listOf(
