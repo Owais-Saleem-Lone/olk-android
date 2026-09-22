@@ -150,7 +150,7 @@ class ChatViewModelTest {
             viewModel.onDraftChange("keep me too")
             viewModel.send()
             advanceUntilIdle()
-            assertEquals("Your account is suspended, so you can't send messages until it ends.", awaitItem())
+            assertEquals("Your account is suspended, so you can only message about a book that has already changed hands.", awaitItem())
         }
         assertEquals("keep me too", (viewModel.uiState.value as ChatUiState.Ready).draft)
     }

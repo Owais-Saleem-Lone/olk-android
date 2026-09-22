@@ -518,6 +518,7 @@ private fun RequestStatus.label(): String = when (this) {
     RequestStatus.HANDED_OVER -> "Handed Over"
     RequestStatus.RETURNED -> "Returned"
     RequestStatus.DECLINED -> "Declined"
+    RequestStatus.CANCELLED -> "Cancelled"
 }
 
 private val JoinedFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())

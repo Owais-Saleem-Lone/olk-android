@@ -417,6 +417,7 @@ private fun RequestStatusChip(item: BookRequestItem, direction: RequestDirection
         RequestStatus.PENDING -> Triple("Pending", colors.tertiaryContainer, colors.onTertiaryContainer)
         RequestStatus.ACCEPTED -> Triple("Accepted", colors.primaryContainer, colors.onPrimaryContainer)
         RequestStatus.DECLINED -> Triple("Declined", colors.surfaceVariant, colors.onSurfaceVariant)
+        RequestStatus.CANCELLED -> Triple("Cancelled", colors.surfaceVariant, colors.onSurfaceVariant)
         RequestStatus.HANDED_OVER -> Triple(
             when (item.book.listingType) {
                 ListingType.LEND -> if (incoming) "Lent out" else "Borrowed"

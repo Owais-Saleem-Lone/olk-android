@@ -107,6 +107,10 @@ class RequestsViewModelTest {
         assertEquals(listOf(RequestAction.FINISH_READING), actionsFor(donated, outgoing))
         assertEquals(emptyList<RequestAction>(), actionsFor(donated, incoming))
         assertEquals(emptyList<RequestAction>(), actionsFor(request(status = RequestStatus.RETURNED), incoming))
+        // Closed by a suspension: nothing left to do on either side.
+        for (direction in listOf(incoming, outgoing)) {
+            assertEquals(emptyList<RequestAction>(), actionsFor(request(status = RequestStatus.CANCELLED), direction))
+        }
     }
 
     @Test

@@ -49,6 +49,9 @@ enum class RequestStatus {
     @SerialName("declined") DECLINED,
     @SerialName("handed_over") HANDED_OVER,
     @SerialName("returned") RETURNED,
+
+    /** Closed by the database when the requester was suspended (web migration `20260922171355`). */
+    @SerialName("cancelled") CANCELLED,
 }
 
 /** Result of asking for a book, with the failures a user can act on made explicit. */

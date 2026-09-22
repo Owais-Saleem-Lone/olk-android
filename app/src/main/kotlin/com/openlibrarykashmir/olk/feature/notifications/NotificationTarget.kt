@@ -9,6 +9,7 @@ val NOTIFICATION_ICONS: Map<String, String> = mapOf(
     "book_requested" to "📩",
     "request_accepted" to "✅",
     "request_declined" to "❌",
+    "request_cancelled" to "↩️",
     "new_message" to "💬",
     "wishlist_match" to "🌟",
     "handover_confirmed" to "🤝",

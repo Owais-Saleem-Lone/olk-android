@@ -50,7 +50,7 @@ fun actionsFor(item: BookRequestItem, direction: RequestDirection): List<Request
             ListingType.DONATE ->
                 if (direction == RequestDirection.OUTGOING) listOf(RequestAction.FINISH_READING) else emptyList()
         }
-        RequestStatus.DECLINED, RequestStatus.RETURNED -> emptyList()
+        RequestStatus.DECLINED, RequestStatus.RETURNED, RequestStatus.CANCELLED -> emptyList()
     }
 
 /**

@@ -36,7 +36,7 @@ fun SuspensionBanner(
         Column(modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 10.dp)) {
             Text(suspensionHeadline(suspension), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                "You can browse and finish exchanges already under way, but not list, request, message, join or post.",
+                "Your books are hidden and your open requests were closed. You can finish exchanges where a book has changed hands, and message about those, but not list, request, join or post.",
                 style = MaterialTheme.typography.bodySmall,
             )
             Row {

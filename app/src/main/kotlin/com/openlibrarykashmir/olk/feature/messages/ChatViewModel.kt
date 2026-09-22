@@ -123,7 +123,7 @@ class ChatViewModel(
                         }
                         SendOutcome.Suspended -> {
                             restoreDraft(content)
-                            _messages.send("Your account is suspended, so you can't send messages until it ends.")
+                            _messages.send("Your account is suspended, so you can only message about a book that has already changed hands.")
                         }
                     }
                 }
