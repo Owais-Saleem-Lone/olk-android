@@ -1,5 +1,9 @@
 package com.openlibrarykashmir.olk
 
+import app.cash.turbine.test
+import com.openlibrarykashmir.olk.core.data.repository.AccountDeletionRepository
+import com.openlibrarykashmir.olk.core.data.repository.DeleteAccountOutcome
+import com.openlibrarykashmir.olk.core.data.repository.DeletionBlocker
 import com.openlibrarykashmir.olk.core.data.repository.OwnProfile
 import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
 import com.openlibrarykashmir.olk.core.data.repository.ProfileUpdate
@@ -59,11 +63,24 @@ class ProfileViewModelTest {
         }
     }
 
+    private class FakeDeletion(
+        var blockers: List<DeletionBlocker> = emptyList(),
+        var outcome: DeleteAccountOutcome = DeleteAccountOutcome.Deleted,
+    ) : AccountDeletionRepository {
+        var deleteCalls = 0
+        override suspend fun blockers() = blockers
+        override suspend fun delete(): DeleteAccountOutcome {
+            deleteCalls++
+            return outcome
+        }
+    }
+
     private fun viewModel(
         repository: FakeProfiles = FakeProfiles(),
         auth: FakeAuth = FakeAuth(),
+        deletion: FakeDeletion = FakeDeletion(),
         locate: suspend () -> LocateOutcome = { LocateOutcome.Found(SharedLocation(34.08, 74.8)) },
-    ) = ProfileViewModel(repository, auth, { locate() }, now = { now })
+    ) = ProfileViewModel(repository, deletion, auth, { locate() }, now = { now })
 
     private fun ProfileViewModel.editing() = uiState.value as ProfileUiState.Editing
 
@@ -246,5 +263,65 @@ class ProfileViewModelTest {
         assertEquals(emptyList<String>(), matchingAreas("  ", areas))
         assertEquals(emptyList<String>(), matchingAreas("Rajbagh, Srinagar", areas))
         assertEquals(1, matchingAreas("a", areas, limit = 1).size)
+    }
+
+    // ── Deleting the account ──
+
+    @Test
+    fun `offers deletion only once the answer is back, and says what is in the way`() = runTest {
+        val deletion = FakeDeletion(blockers = listOf(DeletionBlocker.OWNS_CLUB))
+        val vm = viewModel(deletion = deletion)
+        advanceUntilIdle()
+        assertEquals(null, vm.editing().deletionBlockers)
+
+        vm.loadDeletionBlockers()
+        advanceUntilIdle()
+        assertEquals(listOf(DeletionBlocker.OWNS_CLUB), vm.editing().deletionBlockers)
+    }
+
+    @Test
+    fun `deletes the account and signs out`() = runTest {
+        val auth = FakeAuth()
+        val deletion = FakeDeletion()
+        val vm = viewModel(auth = auth, deletion = deletion)
+        advanceUntilIdle()
+
+        vm.deleteAccount()
+        advanceUntilIdle()
+
+        assertEquals(1, deletion.deleteCalls)
+        assertTrue(auth.signedOut)
+    }
+
+    @Test
+    fun `a refusal leaves the member signed in and shows what the website said`() = runTest {
+        val auth = FakeAuth()
+        val deletion = FakeDeletion(outcome = DeleteAccountOutcome.Refused("Too many attempts."))
+        val vm = viewModel(auth = auth, deletion = deletion)
+        advanceUntilIdle()
+
+        vm.messages.test {
+            vm.deleteAccount()
+            advanceUntilIdle()
+            assertEquals("Too many attempts.", awaitItem())
+        }
+        assertFalse(auth.signedOut)
+        assertFalse(vm.editing().isDeleting)
+    }
+
+    @Test
+    fun `a late blocker from the website is shown instead of deleting`() = runTest {
+        val auth = FakeAuth()
+        val deletion = FakeDeletion(
+            outcome = DeleteAccountOutcome.Blocked(listOf(DeletionBlocker.UNFINISHED_EXCHANGE)),
+        )
+        val vm = viewModel(auth = auth, deletion = deletion)
+        advanceUntilIdle()
+
+        vm.deleteAccount()
+        advanceUntilIdle()
+
+        assertEquals(listOf(DeletionBlocker.UNFINISHED_EXCHANGE), vm.editing().deletionBlockers)
+        assertFalse(auth.signedOut)
     }
 }

@@ -45,7 +45,7 @@ val appModule = module {
     viewModel { RequestsViewModel(get(), get()) }
     viewModel { MessagesViewModel(get(), get()) }
     viewModel { NotificationsViewModel(get(), get()) }
-    viewModel { ProfileViewModel(get(), get(), get()) }
+    viewModel { ProfileViewModel(get(), get(), get(), get()) }
     viewModel { (requestId: String) -> ChatViewModel(requestId, get(), get()) }
     viewModel { (bookId: String) -> EditBookViewModel(bookId, get(), get(), get(), get()) }
     viewModel { AddBookViewModel(get(), get(), get(), get()) }

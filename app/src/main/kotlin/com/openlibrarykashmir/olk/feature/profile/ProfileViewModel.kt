@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openlibrarykashmir.olk.ui.Suspension
 import com.openlibrarykashmir.olk.ui.activeSuspension
+import com.openlibrarykashmir.olk.core.data.repository.AccountDeletionRepository
+import com.openlibrarykashmir.olk.core.data.repository.DeleteAccountOutcome
+import com.openlibrarykashmir.olk.core.data.repository.DeletionBlocker
 import com.openlibrarykashmir.olk.core.data.repository.OwnProfile
 import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
 import com.openlibrarykashmir.olk.core.data.repository.ProfileUpdate
@@ -63,6 +66,9 @@ sealed interface ProfileUiState {
         val isSaving: Boolean = false,
         val isLocating: Boolean = false,
         val showErrors: Boolean = false,
+        /** Null until the answer is back; empty means nothing is in the way. */
+        val deletionBlockers: List<DeletionBlocker>? = null,
+        val isDeleting: Boolean = false,
     ) : ProfileUiState {
         val hasChanges: Boolean get() = form != saved
     }
@@ -70,6 +76,7 @@ sealed interface ProfileUiState {
 
 class ProfileViewModel(
     private val repository: ProfileRepository,
+    private val deletion: AccountDeletionRepository,
     private val auth: AuthRepository,
     private val locator: Locator,
     private val now: () -> Instant = Instant::now,
@@ -171,6 +178,43 @@ class ProfileViewModel(
                 }
                 .onFailure {
                     updateEditing { it.copy(isSaving = false) }
+                    _messages.send(it.toUserMessage())
+                }
+        }
+    }
+
+    fun loadDeletionBlockers() {
+        val editing = _uiState.value as? ProfileUiState.Editing ?: return
+        if (editing.deletionBlockers != null) return
+        viewModelScope.launch {
+            val blockers = runCatching { deletion.blockers() }.getOrNull() ?: return@launch
+            updateEditing { it.copy(deletionBlockers = blockers) }
+        }
+    }
+
+    /** Deletion is final: the caller asks only after its own confirmation. */
+    fun deleteAccount() {
+        val editing = _uiState.value as? ProfileUiState.Editing ?: return
+        if (editing.isDeleting) return
+        viewModelScope.launch {
+            updateEditing { it.copy(isDeleting = true) }
+            runCatching { deletion.delete() }
+                .onSuccess { outcome ->
+                    updateEditing { it.copy(isDeleting = false) }
+                    when (outcome) {
+                        // Signing out is what takes the app back to the login
+                        // screen; the account itself is already gone.
+                        DeleteAccountOutcome.Deleted -> {
+                            _messages.send("Your account has been deleted.")
+                            auth.signOut()
+                        }
+                        is DeleteAccountOutcome.Blocked ->
+                            updateEditing { it.copy(deletionBlockers = outcome.blockers) }
+                        is DeleteAccountOutcome.Refused -> _messages.send(outcome.message)
+                    }
+                }
+                .onFailure {
+                    updateEditing { it.copy(isDeleting = false) }
                     _messages.send(it.toUserMessage())
                 }
         }

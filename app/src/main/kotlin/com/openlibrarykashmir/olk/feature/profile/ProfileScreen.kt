@@ -55,6 +55,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openlibrarykashmir.olk.ui.Suspension
+import com.openlibrarykashmir.olk.core.data.repository.DeletionBlocker
 import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
 import org.koin.androidx.compose.koinViewModel
 import java.time.ZoneId
@@ -72,6 +73,11 @@ fun ProfileScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+
+    // Asked once the profile is on screen, so the button can say up front
+    // whether anything is in the way.
+    LaunchedEffect(state) { viewModel.loadDeletionBlockers() }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
@@ -117,9 +123,40 @@ fun ProfileScreen(
                     onSignOut = { confirmSignOut = true },
                     onContactAdmin = onContactAdmin,
                     onJoinTeam = onJoinTeam,
+                    onDeleteAccount = { confirmDelete = true },
                 )
             }
         }
+    }
+
+    if (confirmDelete) {
+        val editing = state as? ProfileUiState.Editing
+        AlertDialog(
+            onDismissRequest = { if (editing?.isDeleting != true) confirmDelete = false },
+            title = { Text("Delete your account?") },
+            text = {
+                Text(
+                    "Your profile, books, requests and messages are deleted straight away and cannot be " +
+                        "brought back. Ratings and reports you wrote about other members stay, without your " +
+                        "name on them.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = editing?.isDeleting != true,
+                    onClick = {
+                        confirmDelete = false
+                        viewModel.deleteAccount()
+                    },
+                ) { Text("Delete for good", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { confirmDelete = false },
+                    enabled = editing?.isDeleting != true,
+                ) { Text("Cancel") }
+            },
+        )
     }
 
     if (confirmSignOut) {
@@ -147,6 +184,7 @@ private fun ProfileFields(
     onSignOut: () -> Unit,
     onContactAdmin: () -> Unit,
     onJoinTeam: () -> Unit,
+    onDeleteAccount: () -> Unit,
 ) {
     val form = state.form
     Column(
@@ -241,6 +279,43 @@ private fun ProfileFields(
         OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
             Text("Sign out", modifier = Modifier.padding(start = 8.dp))
+        }
+
+        DeleteAccountSection(blockers = state.deletionBlockers, onDelete = onDeleteAccount)
+    }
+}
+
+/** What each blocker means, in the website's words (`delete-account.tsx`). */
+private fun DeletionBlocker.explain(): String = when (this) {
+    DeletionBlocker.UNFINISHED_EXCHANGE ->
+        "A book is still out on loan. Once every book has been returned or passed on, you can delete your account."
+    DeletionBlocker.OWNS_CLUB ->
+        "You run a book club. Contact the admin team to hand it over first, so its members and chat are not lost."
+    DeletionBlocker.IS_ADMIN -> "Admin accounts are removed by another admin. Please contact the team."
+}
+
+@Composable
+private fun DeleteAccountSection(blockers: List<DeletionBlocker>?, onDelete: () -> Unit) {
+    if (blockers == null) return
+
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        if (blockers.isEmpty()) {
+            TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                Text("Delete account", color = MaterialTheme.colorScheme.error)
+            }
+        } else {
+            Text(
+                text = "Delete account",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+            blockers.forEach {
+                Text(
+                    text = it.explain(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }

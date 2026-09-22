@@ -24,6 +24,8 @@ import com.openlibrarykashmir.olk.core.data.repository.SupabaseClubsRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseEventsRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseSupportRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupportRepository
+import com.openlibrarykashmir.olk.core.data.repository.AccountDeletionRepository
+import com.openlibrarykashmir.olk.core.data.repository.WebsiteAccountDeletionRepository
 import com.openlibrarykashmir.olk.core.data.repository.TeamApplicationRepository
 import com.openlibrarykashmir.olk.core.data.repository.WebsiteTeamApplicationRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseListsRepository
@@ -89,4 +91,5 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String, websiteUrl: String)
     }
     single<IsbnLookupRepository> { OpenLibraryIsbnRepository(get()) }
     single<TeamApplicationRepository> { WebsiteTeamApplicationRepository(get(), get(), websiteUrl) }
+    single<AccountDeletionRepository> { WebsiteAccountDeletionRepository(get(), get(), websiteUrl) }
 }
