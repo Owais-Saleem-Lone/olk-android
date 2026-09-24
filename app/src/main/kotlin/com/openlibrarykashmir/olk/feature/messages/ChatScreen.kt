@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openlibrarykashmir.olk.core.data.repository.ChatMessage
 import com.openlibrarykashmir.olk.core.data.repository.MessagesRepository
+import com.openlibrarykashmir.olk.feature.people.BlockMenu
 import com.openlibrarykashmir.olk.ui.parseTimestamp
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -107,6 +108,11 @@ fun ChatScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    ready?.info?.otherParty?.id?.let { otherId ->
+                        BlockMenu(otherId, onMessage = { snackbarHostState.showSnackbar(it) })
                     }
                 },
             )

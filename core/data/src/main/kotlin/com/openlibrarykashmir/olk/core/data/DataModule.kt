@@ -1,6 +1,7 @@
 package com.openlibrarykashmir.olk.core.data
 
 import com.openlibrarykashmir.olk.core.data.remote.SupabaseClientFactory
+import com.openlibrarykashmir.olk.core.data.repository.BlocksRepository
 import com.openlibrarykashmir.olk.core.data.repository.BookDetailRepository
 import com.openlibrarykashmir.olk.core.data.repository.BookNotesRepository
 import com.openlibrarykashmir.olk.core.data.repository.ClubOrganiserRepository
@@ -17,6 +18,7 @@ import com.openlibrarykashmir.olk.core.data.repository.NotificationsRepository
 import com.openlibrarykashmir.olk.core.data.repository.PlatformSettingsRepository
 import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
 import com.openlibrarykashmir.olk.core.data.repository.RequestsRepository
+import com.openlibrarykashmir.olk.core.data.repository.SupabaseBlocksRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookDetailRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookNotesRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseClubOrganiserRepository
@@ -81,6 +83,7 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String, websiteUrl: String)
     single<ClubOrganiserRepository> { SupabaseClubOrganiserRepository(get()) }
     single<EventsRepository> { SupabaseEventsRepository(get()) }
     single<SupportRepository> { SupabaseSupportRepository(get()) }
+    single<BlocksRepository> { SupabaseBlocksRepository(get()) }
 
     // The two calls that do not go to Supabase: Open Library (ISBN lookup), and
     // the website's team-application endpoint, which takes the CV upload.

@@ -146,6 +146,9 @@ The next build without those variables points back at your usual project.
       the database refuses something (it enforces suspensions itself)
 - [x] Starting a club (a request the OLK team reviews, with an optional cover) and scheduling a
       club's event (date and time, online link or venue, members-only, capacity, cover)
+- [x] Blocking a member — from their profile or a chat; cuts contact both ways (books, requests,
+      messages, club joins), hides their posts and notes from you, and they are never told.
+      Reporting a book is in the book page's menu
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**

@@ -67,6 +67,7 @@ fun ProfileScreen(
     onBack: () -> Unit,
     onContactAdmin: () -> Unit,
     onJoinTeam: () -> Unit,
+    onBlockedMembers: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
@@ -123,6 +124,7 @@ fun ProfileScreen(
                     onSignOut = { confirmSignOut = true },
                     onContactAdmin = onContactAdmin,
                     onJoinTeam = onJoinTeam,
+                    onBlockedMembers = onBlockedMembers,
                     onDeleteAccount = { confirmDelete = true },
                 )
             }
@@ -184,6 +186,7 @@ private fun ProfileFields(
     onSignOut: () -> Unit,
     onContactAdmin: () -> Unit,
     onJoinTeam: () -> Unit,
+    onBlockedMembers: () -> Unit,
     onDeleteAccount: () -> Unit,
 ) {
     val form = state.form
@@ -275,6 +278,7 @@ private fun ProfileFields(
         // The website's sidebar has these two under the account menu.
         OutlinedButton(onClick = onContactAdmin, modifier = Modifier.fillMaxWidth()) { Text("🛟  Contact Admin") }
         OutlinedButton(onClick = onJoinTeam, modifier = Modifier.fillMaxWidth()) { Text("🤝  Join the OLK Team") }
+        OutlinedButton(onClick = onBlockedMembers, modifier = Modifier.fillMaxWidth()) { Text("🚫  Blocked members") }
 
         OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))

@@ -55,6 +55,7 @@ import com.openlibrarykashmir.olk.feature.notifications.NotificationBell
 import com.openlibrarykashmir.olk.feature.notifications.NotificationTarget
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsScreen
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
+import com.openlibrarykashmir.olk.feature.people.BlockedMembersScreen
 import com.openlibrarykashmir.olk.feature.people.UserProfileScreen
 import com.openlibrarykashmir.olk.feature.profile.ProfileScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
@@ -113,6 +114,9 @@ data object ProfileRoute
 /** Another reader's public profile. */
 @Serializable
 data class UserProfileRoute(val userId: String)
+
+@Serializable
+data object BlockedMembersRoute
 
 @Serializable
 data object ClubsRoute
@@ -400,6 +404,13 @@ fun OlkNavHost(
                     onBack = { navController.popBackStack() },
                     onContactAdmin = { navController.navigate(SupportRoute) },
                     onJoinTeam = { navController.navigate(JoinTeamRoute) },
+                    onBlockedMembers = { navController.navigate(BlockedMembersRoute) },
+                )
+            }
+            composable<BlockedMembersRoute> {
+                BlockedMembersScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
                 )
             }
             composable<SupportRoute> {

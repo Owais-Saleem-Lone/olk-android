@@ -24,6 +24,8 @@ import com.openlibrarykashmir.olk.feature.mybooks.DeviceCoverUploader
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookViewModel
 import com.openlibrarykashmir.olk.feature.mybooks.MyBooksViewModel
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
+import com.openlibrarykashmir.olk.feature.people.BlockViewModel
+import com.openlibrarykashmir.olk.feature.people.BlockedMembersViewModel
 import com.openlibrarykashmir.olk.feature.people.UserProfileViewModel
 import com.openlibrarykashmir.olk.feature.profile.DeviceLocator
 import com.openlibrarykashmir.olk.feature.profile.Locator
@@ -61,6 +63,8 @@ val appModule = module {
     viewModel { SavedViewModel(get(), get()) }
     viewModel { WishlistViewModel(get(), get()) }
     viewModel { (userId: String) -> UserProfileViewModel(userId, get()) }
+    viewModel { (userId: String) -> BlockViewModel(userId, get(), get()) }
+    viewModel { BlockedMembersViewModel(get()) }
     viewModel { ClubsViewModel(get(), get()) }
     viewModel { RequestClubViewModel(get(), get(), get(), get(named(CoverBucket.CLUBS.id))) }
     viewModel { (clubId: String, clubName: String) ->
