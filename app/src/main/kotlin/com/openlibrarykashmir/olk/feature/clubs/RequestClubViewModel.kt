@@ -211,6 +211,10 @@ class RequestClubViewModel(
                             _messages.send("You already have a club request waiting for review.")
                             load()
                         }
+                        ClubRequestOutcome.AlreadyRunsClub -> {
+                            updateForm { s -> s.copy(isSubmitting = false) }
+                            _messages.send("You already run a club. Each member can run one club.")
+                        }
                         is ClubRequestOutcome.NotEligible -> {
                             _messages.send(it.reason)
                             load()

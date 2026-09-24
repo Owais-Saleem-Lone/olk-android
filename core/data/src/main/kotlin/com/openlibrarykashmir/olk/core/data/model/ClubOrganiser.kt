@@ -55,6 +55,8 @@ data class EventDraft(
 sealed interface ClubRequestOutcome {
     data object Submitted : ClubRequestOutcome
     data object AlreadyPending : ClubRequestOutcome
+    /** A member may run one club (web migration 20260924193921). */
+    data object AlreadyRunsClub : ClubRequestOutcome
     data object Suspended : ClubRequestOutcome
     /** The database's own sentence, e.g. "requires 5 completed exchanges (you have 2)". */
     data class NotEligible(val reason: String) : ClubRequestOutcome

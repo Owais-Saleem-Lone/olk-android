@@ -154,16 +154,27 @@ class AddBookViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
-            runCatching {
+            var uploaded: String? = null
+            val result = runCatching {
                 // Cover first: a failed upload should not leave a listing without
                 // the photo the user chose.
                 val coverUrl = state.form.cover.resolve(ownerId, uploader)
+                if (state.form.cover is CoverChoice.Picked) uploaded = coverUrl
                 repository.add(ownerId, state.form.toNewBook(coverUrl))
-            }.onSuccess { outcome ->
+            }
+            // A book that was never listed must not leave its photo in storage.
+            if (result.getOrNull() !is AddBookOutcome.Added) repository.removeCover(ownerId, uploaded)
+            result.onSuccess { outcome ->
                 when (outcome) {
                     is AddBookOutcome.Added -> _events.send(EditBookEvent.Done("Book added"))
                     AddBookOutcome.DailyLimitReached ->
                         _events.send(EditBookEvent.Message("You've reached today's limit for new books. Try again tomorrow."))
+                    is AddBookOutcome.BookLimitReached ->
+                        _events.send(
+                            EditBookEvent.Message(
+                                "You can have at most ${outcome.limit} books listed. Delete one you no longer share to add another.",
+                            ),
+                        )
                 }
             }.onFailure { _events.send(EditBookEvent.Message(it.toCoverAwareMessage())) }
             _uiState.update { it.copy(isSaving = false) }

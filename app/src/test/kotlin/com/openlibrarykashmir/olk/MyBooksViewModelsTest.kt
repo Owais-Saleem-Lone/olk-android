@@ -21,6 +21,7 @@ import com.openlibrarykashmir.olk.core.data.repository.RequestsRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthState
 import com.openlibrarykashmir.olk.feature.mybooks.AddBookViewModel
+import com.openlibrarykashmir.olk.feature.mybooks.CoverChoice
 import com.openlibrarykashmir.olk.feature.mybooks.CoverUploader
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookEvent
 import com.openlibrarykashmir.olk.feature.mybooks.EditBookUiState
@@ -128,6 +129,12 @@ class MyBooksViewModelsTest {
         }
 
         override suspend fun uploadCover(ownerId: String, webpBytes: ByteArray) = "https://covers/$ownerId.webp"
+
+        val removedCovers = mutableListOf<String>()
+
+        override suspend fun removeCover(ownerId: String, publicUrl: String?) {
+            publicUrl?.let { removedCovers += it }
+        }
     }
 
     @Test
@@ -254,6 +261,67 @@ class MyBooksViewModelsTest {
         advanceUntilIdle()
 
         assertEquals("https://covers/existing.webp", repo.lastEdit?.coverUrl)
+    }
+
+    @Test
+    fun `removing a cover deletes the old file once the change is saved`() = runTest {
+        val withCover = book().copy(coverUrl = "https://covers/old.webp")
+        val repo = FakeMyBooks(books = listOf(withCover))
+        val viewModel = EditBookViewModel("b1", FakeBooks(withCover), repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        viewModel.onFormChange { it.copy(cover = CoverChoice.Removed) }
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertNull(repo.lastEdit?.coverUrl)
+        assertEquals(listOf("https://covers/old.webp"), repo.removedCovers)
+    }
+
+    @Test
+    fun `a cover stays when the change could not be saved`() = runTest {
+        val withCover = book().copy(coverUrl = "https://covers/old.webp")
+        val repo = FakeMyBooks(books = listOf(withCover))
+        val viewModel = EditBookViewModel("b1", FakeBooks(withCover), repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        repo.failWith = RuntimeException("timeout")
+        viewModel.onFormChange { it.copy(cover = CoverChoice.Removed) }
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), repo.removedCovers)
+    }
+
+    @Test
+    fun `deleting a book deletes its cover`() = runTest {
+        val withCover = book().copy(coverUrl = "https://covers/old.webp")
+        val repo = FakeMyBooks(books = listOf(withCover))
+        val viewModel = EditBookViewModel("b1", FakeBooks(withCover), repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        viewModel.delete()
+        advanceUntilIdle()
+
+        assertEquals(listOf("https://covers/old.webp"), repo.removedCovers)
+    }
+
+    @Test
+    fun `the 25-book limit is explained`() = runTest {
+        val repo = FakeMyBooks().apply { addOutcome = AddBookOutcome.BookLimitReached(25) }
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD, NO_LOOKUP)
+        advanceUntilIdle()
+
+        viewModel.events.test {
+            viewModel.onFormChange { it.copy(title = "Book 26") }
+            viewModel.save()
+            advanceUntilIdle()
+
+            assertEquals(
+                EditBookEvent.Message("You can have at most 25 books listed. Delete one you no longer share to add another."),
+                awaitItem(),
+            )
+        }
     }
 
     @Test

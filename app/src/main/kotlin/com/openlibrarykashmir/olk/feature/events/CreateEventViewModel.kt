@@ -159,7 +159,7 @@ class CreateEventViewModel(
                         // The database tells the club's members (trg_notify_club_event_created).
                         is CreateEventOutcome.Created -> _uiState.update { s -> s.copy(createdEventId = it.eventId) }
                         CreateEventOutcome.MonthlyLimitReached ->
-                            _messages.send("This club has already used its event for this month. Try again next month.")
+                            _messages.send("This club has already used its events for this month. Try again next month.")
                         CreateEventOutcome.CapacityTooHigh ->
                             _messages.send("That capacity is above the current limit of ${OrganiserRules.MAX_CAPACITY} people.")
                         CreateEventOutcome.StartsInPast -> _messages.send("An event can't start in the past.")

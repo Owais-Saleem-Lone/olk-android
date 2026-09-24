@@ -3,6 +3,7 @@ package com.openlibrarykashmir.olk.core.data.repository
 import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookCondition
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
+import com.openlibrarykashmir.olk.core.data.model.CoverBucket
 import com.openlibrarykashmir.olk.core.data.model.IdRow
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import io.github.jan.supabase.SupabaseClient
@@ -48,6 +49,9 @@ sealed interface AddBookOutcome {
 
     /** `enforce_book_listing_rate_limit` (`max_books_per_day`, default 20). */
     data object DailyLimitReached : AddBookOutcome
+
+    /** The same trigger's `max_books_per_user` (25): books a member may have listed at once. */
+    data class BookLimitReached(val limit: Int) : AddBookOutcome
 }
 
 sealed interface DeleteOutcome {
@@ -85,6 +89,13 @@ interface MyBooksRepository {
      * public URL.
      */
     suspend fun uploadCover(ownerId: String, webpBytes: ByteArray): String
+
+    /**
+     * Deletes a cover no book points at any more — replaced, removed, or its
+     * book deleted or never saved. Only a file in [ownerId]'s own folder; best
+     * effort.
+     */
+    suspend fun removeCover(ownerId: String, publicUrl: String?)
 }
 
 internal class SupabaseMyBooksRepository(
@@ -117,11 +128,7 @@ internal class SupabaseMyBooksRepository(
             ) { select(Columns.list("id")) }.decodeSingle<IdRow>()
             AddBookOutcome.Added(row.id)
         } catch (e: PostgrestRestException) {
-            if (e.error.startsWith(RATE_LIMIT_PREFIX) || e.message.orEmpty().contains(RATE_LIMIT_PREFIX)) {
-                AddBookOutcome.DailyLimitReached
-            } else {
-                throw e
-            }
+            addBookErrorOutcome("${e.error} ${e.message}") ?: throw e
         }
 
     override suspend fun update(bookId: String, edit: BookEdit): Book? =
@@ -154,7 +161,7 @@ internal class SupabaseMyBooksRepository(
     override suspend fun uploadCover(ownerId: String, webpBytes: ByteArray): String {
         // Same `<userId>/<timestamp>.<ext>` layout the web form uses.
         val path = "$ownerId/${Clock.System.now().toEpochMilliseconds()}.webp"
-        val bucket = client.storage.from(COVERS_BUCKET)
+        val bucket = client.storage.from(CoverBucket.BOOKS.id)
         bucket.upload(path, webpBytes) {
             upsert = false
             contentType = ContentType.parse("image/webp")
@@ -162,8 +169,14 @@ internal class SupabaseMyBooksRepository(
         return bucket.publicUrl(path)
     }
 
-    private companion object {
-        const val RATE_LIMIT_PREFIX = "RATE_LIMIT_EXCEEDED"
-        const val COVERS_BUCKET = "book-covers"
-    }
+    override suspend fun removeCover(ownerId: String, publicUrl: String?) =
+        client.removeOwnCover(CoverBucket.BOOKS, publicUrl, ownerId)
+}
+
+/** The listing limits `enforce_book_listing_rate_limit` raises (web migration 20260924193921). */
+internal fun addBookErrorOutcome(message: String): AddBookOutcome? = when {
+    "BOOK_LIMIT_REACHED" in message ->
+        AddBookOutcome.BookLimitReached(Regex("max (\\d+)").find(message)?.groupValues?.get(1)?.toIntOrNull() ?: 25)
+    "RATE_LIMIT_EXCEEDED" in message -> AddBookOutcome.DailyLimitReached
+    else -> null
 }

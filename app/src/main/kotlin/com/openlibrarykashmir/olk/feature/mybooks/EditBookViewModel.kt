@@ -143,17 +143,26 @@ class EditBookViewModel(
 
         viewModelScope.launch {
             updateEditing { it.copy(isSaving = true) }
-            runCatching {
+            val ownerId = state.book.ownerId
+            var coverUrl: String? = state.book.coverUrl
+            val result = runCatching {
+                coverUrl = form.cover.resolve(ownerId, uploader)
                 val edit = BookEdit(
                     title = form.title.trim(),
                     author = form.author.trim().ifEmpty { null },
                     status = form.status,
                     genre = form.genre,
                     lendingDurationMonths = form.lendingDurationMonths.takeIf { state.book.listingType == ListingType.LEND },
-                    coverUrl = form.cover.resolve(state.book.ownerId, uploader),
+                    coverUrl = coverUrl,
                 )
                 repository.update(bookId, edit)
             }
+            // Whichever cover the book no longer points at is removed: the old one
+            // once the change is saved, the new upload if it was not.
+            if (coverUrl != state.book.coverUrl) {
+                repository.removeCover(ownerId, if (result.getOrNull() != null) state.book.coverUrl else coverUrl)
+            }
+            result
                 .onSuccess { saved ->
                     if (saved == null) {
                         _uiState.value = EditBookUiState.NotFound
@@ -176,6 +185,7 @@ class EditBookViewModel(
                 .onSuccess { outcome ->
                     when (outcome) {
                         DeleteOutcome.Deleted -> {
+                            repository.removeCover(state.book.ownerId, state.book.coverUrl)
                             _events.send(EditBookEvent.Done("Book deleted"))
                         }
                         DeleteOutcome.NotAllowed ->

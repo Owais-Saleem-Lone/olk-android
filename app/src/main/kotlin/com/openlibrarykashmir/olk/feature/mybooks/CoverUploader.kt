@@ -56,6 +56,11 @@ internal fun Throwable.toCoverAwareMessage(): String {
     val raw = message.orEmpty().lowercase()
     return when {
         this is IllegalArgumentException -> "That photo couldn't be used. Try a different one."
+        // Storage refuses an upload over the member's allowance (web migration
+        // 20260924193921) as a row-level refusal, and one over 1 MB by size.
+        "row-level security" in raw ->
+            "You've reached the limit of photos you can upload. Remove a cover you no longer use and try again."
+        "maximum allowed size" in raw -> "That photo is too large. Try a different one."
         "network" in raw || "unable to resolve host" in raw || "timeout" in raw ->
             "No connection. Check your network and try again."
         else -> "Something went wrong. Please try again."

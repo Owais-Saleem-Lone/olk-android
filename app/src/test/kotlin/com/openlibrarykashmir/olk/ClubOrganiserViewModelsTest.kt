@@ -185,6 +185,19 @@ class ClubOrganiserViewModelsTest {
         }
     }
 
+    @Test
+    fun `someone who already runs a club is told so`() = runTest {
+        val vm = requestVm(FakeOrganiser(requestOutcome = ClubRequestOutcome.AlreadyRunsClub))
+        advanceUntilIdle()
+        vm.onFormChange { it.copy(name = "Circle", description = "About books.") }
+        vm.toggleInterest("Fiction")
+        vm.messages.test {
+            vm.submit()
+            advanceUntilIdle()
+            assertEquals("You already run a club. Each member can run one club.", awaitItem())
+        }
+    }
+
     // ── Schedule an event ──
 
     private val now = Instant.parse("2026-09-24T12:00:00Z")
@@ -260,7 +273,7 @@ class ClubOrganiserViewModelsTest {
         vm.messages.test {
             vm.create()
             advanceUntilIdle()
-            assertEquals("This club has already used its event for this month. Try again next month.", awaitItem())
+            assertEquals("This club has already used its events for this month. Try again next month.", awaitItem())
         }
         assertNull(vm.uiState.value.createdEventId)
     }

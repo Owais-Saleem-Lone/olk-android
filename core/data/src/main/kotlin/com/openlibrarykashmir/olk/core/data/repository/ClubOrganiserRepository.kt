@@ -98,13 +98,17 @@ internal class SupabaseClubOrganiserRepository(private val client: SupabaseClien
         }
     }
 
-    override suspend fun withdrawRequest(requestId: String): Boolean =
+    override suspend fun withdrawRequest(requestId: String): Boolean {
         // RLS allows deleting only one's own PENDING request, silently; ask for
         // the row back to know it went.
-        client.from("club_requests").delete {
-            select(Columns.list("id"))
+        val withdrawn = client.from("club_requests").delete {
+            select(Columns.list("id", "requester_id", "cover_url"))
             filter { eq("id", requestId) }
-        }.decodeList<IdRow>().isNotEmpty()
+        }.decodeList<WithdrawnRequestRow>().firstOrNull() ?: return false
+        // A cover uploaded for a club that will never exist.
+        client.removeOwnCover(CoverBucket.CLUBS, withdrawn.coverUrl, withdrawn.requesterId)
+        return true
+    }
 
     override suspend fun createEvent(userId: String, draft: EventDraft): CreateEventOutcome =
         try {
@@ -151,8 +155,8 @@ internal class SupabaseClubOrganiserRepository(private val client: SupabaseClien
 
     override suspend fun removeCover(bucket: CoverBucket, publicUrl: String) {
         // Only a URL of that bucket; a pasted link is never ours to delete.
-        val path = publicUrl.substringAfter("/object/public/${bucket.id}/", missingDelimiterValue = "")
-        if (path.isNotEmpty()) runCatching { client.storage.from(bucket.id).delete(path) }
+        val path = coverStoragePath(publicUrl, bucket) ?: return
+        runCatching { client.storage.from(bucket.id).delete(path) }
     }
 
     private companion object {
@@ -165,6 +169,7 @@ internal fun clubRequestErrorOutcome(code: String?, message: String?): ClubReque
     val text = message.orEmpty()
     return when {
         code == "23505" -> ClubRequestOutcome.AlreadyPending
+        "CLUB_LIMIT_REACHED" in text -> ClubRequestOutcome.AlreadyRunsClub
         "Not eligible" in text -> ClubRequestOutcome.NotEligible(
             text.substringAfter("Not eligible").let { "Not eligible$it" }.substringBefore("\n").trim(),
         )
@@ -188,6 +193,12 @@ internal fun eventErrorOutcome(code: String?, message: String?): CreateEventOutc
         else -> null
     }
 }
+
+@Serializable
+private data class WithdrawnRequestRow(
+    @SerialName("requester_id") val requesterId: String,
+    @SerialName("cover_url") val coverUrl: String? = null,
+)
 
 @Serializable
 private data class ClubRequestRow(
