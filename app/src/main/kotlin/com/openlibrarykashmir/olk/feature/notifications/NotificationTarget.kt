@@ -33,6 +33,9 @@ sealed interface NotificationTarget {
     data object MyBooks : NotificationTarget
     data class Club(val clubId: String) : NotificationTarget
     data object Clubs : NotificationTarget
+
+    /** The club-request form (e.g. after a request was not approved). */
+    data object RequestClub : NotificationTarget
     data class Event(val eventId: String) : NotificationTarget
     data object Events : NotificationTarget
     data object Support : NotificationTarget
@@ -41,7 +44,7 @@ sealed interface NotificationTarget {
     /** Nowhere to go — the notification is its own content. Just mark it read. */
     data object None : NotificationTarget
 
-    /** A page the app does not have yet, such as the club-request form. */
+    /** A page the app does not have yet. */
     data object WebsiteOnly : NotificationTarget
 
     /** Messaging exists in the app but an admin has switched the feature off. */
@@ -76,10 +79,9 @@ fun notificationTarget(
         segments.size == 2 && segments[0] == "books" -> NotificationTarget.Book(segments[1])
         segments[0] == "clubs" && !clubsEnabled -> NotificationTarget.ClubsOff
         // club_joined, club_membership_approved, club_announcement and
-        // club_request_approved all link to a club. "create" is the website's
-        // club-request form, which the app does not have.
-        segments.size == 2 && segments[0] == "clubs" && segments[1] != "create" ->
-            NotificationTarget.Club(segments[1])
+        // club_request_approved all link to a club. "create" is the club-request form.
+        segments.size == 2 && segments[0] == "clubs" && segments[1] == "create" -> NotificationTarget.RequestClub
+        segments.size == 2 && segments[0] == "clubs" -> NotificationTarget.Club(segments[1])
         segments.size == 1 && segments[0] == "clubs" -> NotificationTarget.Clubs
         // Events belong to clubs, so switching clubs off hides them as well.
         segments[0] == "events" && !(eventsEnabled && clubsEnabled) -> NotificationTarget.EventsOff

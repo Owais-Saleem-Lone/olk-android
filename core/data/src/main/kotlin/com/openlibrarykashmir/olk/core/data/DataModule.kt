@@ -3,6 +3,7 @@ package com.openlibrarykashmir.olk.core.data
 import com.openlibrarykashmir.olk.core.data.remote.SupabaseClientFactory
 import com.openlibrarykashmir.olk.core.data.repository.BookDetailRepository
 import com.openlibrarykashmir.olk.core.data.repository.BookNotesRepository
+import com.openlibrarykashmir.olk.core.data.repository.ClubOrganiserRepository
 import com.openlibrarykashmir.olk.core.data.repository.BookRepository
 import com.openlibrarykashmir.olk.core.data.repository.IsbnLookupRepository
 import com.openlibrarykashmir.olk.core.data.repository.MessagesRepository
@@ -18,6 +19,7 @@ import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
 import com.openlibrarykashmir.olk.core.data.repository.RequestsRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookDetailRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookNotesRepository
+import com.openlibrarykashmir.olk.core.data.repository.SupabaseClubOrganiserRepository
 import com.openlibrarykashmir.olk.core.data.repository.OpenLibraryIsbnRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseMessagesRepository
@@ -76,6 +78,7 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String, websiteUrl: String)
     single<HomeRepository> { SupabaseHomeRepository(get()) }
     single<PeopleRepository> { SupabasePeopleRepository(get()) }
     single<ClubsRepository> { SupabaseClubsRepository(get()) }
+    single<ClubOrganiserRepository> { SupabaseClubOrganiserRepository(get()) }
     single<EventsRepository> { SupabaseEventsRepository(get()) }
     single<SupportRepository> { SupabaseSupportRepository(get()) }
 

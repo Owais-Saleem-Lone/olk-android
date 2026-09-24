@@ -144,7 +144,8 @@ The next build without those variables points back at your usual project.
       website's endpoint (which stores the CV privately and emails the team)
 - [x] Suspensions — a notice on every screen while one lasts, and the real reason when
       the database refuses something (it enforces suspensions itself)
-- [ ] Starting a club and scheduling an event — still on the website
+- [x] Starting a club (a request the OLK team reviews, with an optional cover) and scheduling a
+      club's event (date and time, online link or venue, members-only, capacity, cover)
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**

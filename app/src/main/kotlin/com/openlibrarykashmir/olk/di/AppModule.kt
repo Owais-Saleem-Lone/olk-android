@@ -1,5 +1,9 @@
 package com.openlibrarykashmir.olk.di
 
+import com.openlibrarykashmir.olk.core.data.model.CoverBucket
+import com.openlibrarykashmir.olk.feature.clubs.RequestClubViewModel
+import com.openlibrarykashmir.olk.feature.events.CreateEventViewModel
+import com.openlibrarykashmir.olk.feature.mybooks.DeviceOrganiserCoverUploader
 import com.openlibrarykashmir.olk.MainViewModel
 import com.openlibrarykashmir.olk.feature.auth.AuthViewModel
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailViewModel
@@ -31,10 +35,13 @@ import com.openlibrarykashmir.olk.feature.team.DeviceCvReader
 import com.openlibrarykashmir.olk.feature.team.JoinTeamViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val appModule = module {
     single<CoverUploader> { DeviceCoverUploader(androidContext(), get()) }
+    single<CoverUploader>(named(CoverBucket.CLUBS.id)) { DeviceOrganiserCoverUploader(androidContext(), get(), CoverBucket.CLUBS) }
+    single<CoverUploader>(named(CoverBucket.EVENTS.id)) { DeviceOrganiserCoverUploader(androidContext(), get(), CoverBucket.EVENTS) }
     single<Locator> { DeviceLocator(androidContext()) }
     single<CvReader> { DeviceCvReader(androidContext()) }
     viewModel { MainViewModel(get(), get(), get()) }
@@ -55,6 +62,10 @@ val appModule = module {
     viewModel { WishlistViewModel(get(), get()) }
     viewModel { (userId: String) -> UserProfileViewModel(userId, get()) }
     viewModel { ClubsViewModel(get(), get()) }
+    viewModel { RequestClubViewModel(get(), get(), get(), get(named(CoverBucket.CLUBS.id))) }
+    viewModel { (clubId: String, clubName: String) ->
+        CreateEventViewModel(clubId, clubName, get(), get(), get(named(CoverBucket.EVENTS.id)))
+    }
     viewModel { (clubId: String) -> ClubDetailViewModel(clubId, get(), get(), get()) }
     viewModel { EventsViewModel(get()) }
     viewModel { SupportViewModel(get(), get()) }

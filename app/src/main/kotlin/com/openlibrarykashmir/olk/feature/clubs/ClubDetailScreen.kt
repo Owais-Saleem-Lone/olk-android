@@ -66,6 +66,8 @@ fun ClubDetailScreen(
     onBack: () -> Unit,
     onMemberClick: (String) -> Unit,
     onEventClick: (String) -> Unit,
+    /** The owner schedules an event: club id and name. */
+    onScheduleEvent: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     /** Whether an admin has events switched on; see `platform_settings`. */
     eventsEnabled: Boolean = true,
@@ -152,14 +154,18 @@ fun ClubDetailScreen(
 
                 if (eventsEnabled) {
                     item { Text("Upcoming events", style = MaterialTheme.typography.titleMedium) }
+                    val club = state.club
+                    if (state.isOwner && club != null) {
+                        item {
+                            OutlinedButton(onClick = { onScheduleEvent(club.id, club.name) }) {
+                                Text("Schedule an event")
+                            }
+                        }
+                    }
                     if (state.events.isEmpty()) {
                         item {
                             Text(
-                                text = if (state.isOwner) {
-                                    "No upcoming events. Events are scheduled on the website for now."
-                                } else {
-                                    "No upcoming events yet."
-                                },
+                                text = "No upcoming events yet.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

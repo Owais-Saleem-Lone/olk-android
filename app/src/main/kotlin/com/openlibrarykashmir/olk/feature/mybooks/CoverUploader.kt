@@ -2,6 +2,8 @@ package com.openlibrarykashmir.olk.feature.mybooks
 
 import android.content.Context
 import android.net.Uri
+import com.openlibrarykashmir.olk.core.data.model.CoverBucket
+import com.openlibrarykashmir.olk.core.data.repository.ClubOrganiserRepository
 import com.openlibrarykashmir.olk.core.data.repository.MyBooksRepository
 
 /**
@@ -21,6 +23,23 @@ class DeviceCoverUploader(
     override suspend fun upload(ownerId: String, photo: Uri): String =
         try {
             repository.uploadCover(ownerId, CoverImage.compress(context, photo))
+        } finally {
+            CoverImage.clearCaptures(context)
+        }
+}
+
+/**
+ * The same compression as a book cover, uploaded to a club's or an event's
+ * cover bucket instead (each lets a member write only their own folder).
+ */
+class DeviceOrganiserCoverUploader(
+    private val context: Context,
+    private val repository: ClubOrganiserRepository,
+    private val bucket: CoverBucket,
+) : CoverUploader {
+    override suspend fun upload(ownerId: String, photo: Uri): String =
+        try {
+            repository.uploadCover(bucket, ownerId, CoverImage.compress(context, photo))
         } finally {
             CoverImage.clearCaptures(context)
         }

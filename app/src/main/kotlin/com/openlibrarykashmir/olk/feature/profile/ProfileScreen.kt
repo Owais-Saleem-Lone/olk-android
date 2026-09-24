@@ -329,7 +329,7 @@ private const val VISIBLE_HINT = "Other readers see this next to your books"
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AreaField(value: String, suggestions: List<String>, onValueChange: (String) -> Unit) {
+internal fun AreaField(value: String, suggestions: List<String>, onValueChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val matches = remember(value, suggestions) { matchingAreas(value, suggestions) }
 

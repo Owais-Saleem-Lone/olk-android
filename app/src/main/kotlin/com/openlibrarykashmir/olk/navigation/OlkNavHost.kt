@@ -40,6 +40,8 @@ import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailScreen
 import com.openlibrarykashmir.olk.feature.browse.BrowseScreen
 import com.openlibrarykashmir.olk.feature.clubs.ClubDetailScreen
 import com.openlibrarykashmir.olk.feature.clubs.ClubsScreen
+import com.openlibrarykashmir.olk.feature.clubs.RequestClubScreen
+import com.openlibrarykashmir.olk.feature.events.CreateEventScreen
 import com.openlibrarykashmir.olk.feature.events.EventDetailScreen
 import com.openlibrarykashmir.olk.feature.events.EventsScreen
 import com.openlibrarykashmir.olk.feature.home.HomeScreen
@@ -119,6 +121,12 @@ data object ClubsRoute
 data class ClubDetailRoute(val clubId: String)
 
 @Serializable
+data object RequestClubRoute
+
+@Serializable
+data class CreateEventRoute(val clubId: String, val clubName: String)
+
+@Serializable
 data object EventsRoute
 
 /** "Contact Admin": the member's private thread with the admin team. */
@@ -160,6 +168,7 @@ private fun NavHostController.openNotificationTarget(target: NotificationTarget)
         is NotificationTarget.Book -> navigate(BookDetailRoute(target.bookId))
         is NotificationTarget.Club -> navigate(ClubDetailRoute(target.clubId))
         NotificationTarget.Clubs -> navigate(ClubsRoute)
+        NotificationTarget.RequestClub -> navigate(RequestClubRoute)
         is NotificationTarget.Event -> navigate(EventDetailRoute(target.eventId))
         NotificationTarget.Events -> navigate(EventsRoute)
         NotificationTarget.Support -> navigate(SupportRoute)
@@ -303,6 +312,27 @@ fun OlkNavHost(
                 ClubsScreen(
                     onClubClick = { clubId -> navController.navigate(ClubDetailRoute(clubId)) },
                     onBack = { navController.popBackStack() },
+                    onRequestClub = { navController.navigate(RequestClubRoute) },
+                )
+            }
+            composable<RequestClubRoute> {
+                RequestClubScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenClub = { clubId -> navController.navigate(ClubDetailRoute(clubId)) },
+                )
+            }
+            composable<CreateEventRoute> { entry ->
+                val route = entry.toRoute<CreateEventRoute>()
+                CreateEventScreen(
+                    clubId = route.clubId,
+                    clubName = route.clubName,
+                    onBack = { navController.popBackStack() },
+                    // The form is done with: open the new event in its place.
+                    onCreated = { eventId ->
+                        navController.navigate(EventDetailRoute(eventId)) {
+                            popUpTo<CreateEventRoute> { inclusive = true }
+                        }
+                    },
                 )
             }
             composable<ClubDetailRoute> { entry ->
@@ -311,6 +341,7 @@ fun OlkNavHost(
                     onBack = { navController.popBackStack() },
                     onMemberClick = { userId -> navController.navigate(UserProfileRoute(userId)) },
                     onEventClick = { eventId -> navController.navigate(EventDetailRoute(eventId)) },
+                    onScheduleEvent = { clubId, clubName -> navController.navigate(CreateEventRoute(clubId, clubName)) },
                     eventsEnabled = featureFlags.events,
                 )
             }

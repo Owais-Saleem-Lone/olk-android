@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -59,6 +60,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ClubsScreen(
     onClubClick: (String) -> Unit,
     onBack: () -> Unit,
+    onRequestClub: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ClubsViewModel = koinViewModel(),
 ) {
@@ -95,6 +97,11 @@ fun ClubsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onRequestClub) {
+                        Icon(Icons.Default.Add, contentDescription = "Start a club")
                     }
                 },
             )
@@ -149,7 +156,7 @@ fun ClubsScreen(
                             text = when {
                                 state.interest != null || state.query.isNotBlank() ->
                                     "No clubs match your search."
-                                else -> "No clubs yet. Clubs are started on the website."
+                                else -> "No clubs yet. Start one with the + button above."
                             },
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

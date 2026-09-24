@@ -247,7 +247,7 @@ class NotificationsViewModelTest {
     fun `links the app has no screen for say so instead of doing nothing`() {
         assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/profile"))
         // The website's club-request and event-creation forms have no screen here either.
-        assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/clubs/create"))
+        assertEquals(NotificationTarget.RequestClub, notificationTarget("/clubs/create"))
         assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/clubs/c1/events/create"))
         // The list itself, or no link at all: already there, nothing to open.
         assertEquals(NotificationTarget.None, notificationTarget("/notifications"))
