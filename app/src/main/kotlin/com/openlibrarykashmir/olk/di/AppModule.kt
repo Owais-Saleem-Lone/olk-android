@@ -3,6 +3,7 @@ package com.openlibrarykashmir.olk.di
 import com.openlibrarykashmir.olk.MainViewModel
 import com.openlibrarykashmir.olk.feature.auth.AuthViewModel
 import com.openlibrarykashmir.olk.feature.bookdetail.BookDetailViewModel
+import com.openlibrarykashmir.olk.feature.bookdetail.BookNotesViewModel
 import com.openlibrarykashmir.olk.feature.browse.BrowseViewModel
 import com.openlibrarykashmir.olk.feature.clubs.ClubDetailViewModel
 import com.openlibrarykashmir.olk.feature.clubs.ClubsViewModel
@@ -41,6 +42,7 @@ val appModule = module {
     viewModel { HomeViewModel(get()) }
     viewModel { (query: String) -> BrowseViewModel(get(), query) }
     viewModel { (bookId: String) -> BookDetailViewModel(bookId, get(), get()) }
+    viewModel { (bookId: String) -> BookNotesViewModel(bookId, get(), get()) }
     viewModel { MyBooksViewModel(get(), get(), get()) }
     viewModel { RequestsViewModel(get(), get()) }
     viewModel { MessagesViewModel(get(), get()) }

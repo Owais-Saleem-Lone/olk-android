@@ -93,12 +93,17 @@ fun BookDetailScreen(
     onOpenProfile: (userId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BookDetailViewModel = koinViewModel(key = bookId) { parametersOf(bookId) },
+    notesViewModel: BookNotesViewModel = koinViewModel(key = "notes-$bookId") { parametersOf(bookId) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val notesState by notesViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
+    }
+    LaunchedEffect(notesViewModel) {
+        notesViewModel.messages.collect { snackbarHostState.showSnackbar(it) }
     }
 
     val content = state as? BookDetailUiState.Content
@@ -164,7 +169,14 @@ fun BookDetailScreen(
                     onAction = viewModel::load,
                 )
 
-                is BookDetailUiState.Content -> DetailBody(s, onOpenProfile)
+                is BookDetailUiState.Content -> DetailBody(s, onOpenProfile) {
+                    BookNotesSection(
+                        state = notesState,
+                        onWrite = notesViewModel::openEditor,
+                        onDelete = notesViewModel::delete,
+                        onRetry = notesViewModel::load,
+                    )
+                }
             }
         }
     }
@@ -175,6 +187,16 @@ fun BookDetailScreen(
             isSending = content.isReporting,
             onDismiss = viewModel::dismissReport,
             onSend = viewModel::report,
+        )
+    }
+
+    if (notesState.isEditorOpen) {
+        NoteEditorDialog(
+            initialText = notesState.myNote?.note.orEmpty(),
+            isEditing = notesState.myNote != null,
+            isSaving = notesState.isSaving,
+            onDismiss = notesViewModel::dismissEditor,
+            onSave = notesViewModel::save,
         )
     }
 }
@@ -265,7 +287,11 @@ private fun ReportDialog(
 }
 
 @Composable
-private fun DetailBody(state: BookDetailUiState.Content, onOpenProfile: (String) -> Unit) {
+private fun DetailBody(
+    state: BookDetailUiState.Content,
+    onOpenProfile: (String) -> Unit,
+    notes: @Composable () -> Unit,
+) {
     val book = state.detail.book
     Column(
         modifier = Modifier
@@ -360,6 +386,8 @@ private fun DetailBody(state: BookDetailUiState.Content, onOpenProfile: (String)
             Spacer(Modifier.height(28.dp))
             OwnerCard(it, onClick = { onOpenProfile(it.id) })
         }
+        Spacer(Modifier.height(28.dp))
+        notes()
         Spacer(Modifier.height(24.dp))
     }
 }

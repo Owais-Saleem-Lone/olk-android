@@ -2,6 +2,7 @@ package com.openlibrarykashmir.olk.core.data
 
 import com.openlibrarykashmir.olk.core.data.remote.SupabaseClientFactory
 import com.openlibrarykashmir.olk.core.data.repository.BookDetailRepository
+import com.openlibrarykashmir.olk.core.data.repository.BookNotesRepository
 import com.openlibrarykashmir.olk.core.data.repository.BookRepository
 import com.openlibrarykashmir.olk.core.data.repository.IsbnLookupRepository
 import com.openlibrarykashmir.olk.core.data.repository.MessagesRepository
@@ -16,6 +17,7 @@ import com.openlibrarykashmir.olk.core.data.repository.PlatformSettingsRepositor
 import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
 import com.openlibrarykashmir.olk.core.data.repository.RequestsRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookDetailRepository
+import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookNotesRepository
 import com.openlibrarykashmir.olk.core.data.repository.OpenLibraryIsbnRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseBookRepository
 import com.openlibrarykashmir.olk.core.data.repository.SupabaseMessagesRepository
@@ -63,6 +65,7 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String, websiteUrl: String)
     single<AuthRepository> { SupabaseAuthRepository(get()) }
     single<BookRepository> { SupabaseBookRepository(get()) }
     single<BookDetailRepository> { SupabaseBookDetailRepository(get(), get()) }
+    single<BookNotesRepository> { SupabaseBookNotesRepository(get()) }
     single<MyBooksRepository> { SupabaseMyBooksRepository(get()) }
     single<RequestsRepository> { SupabaseRequestsRepository(get()) }
     single<MessagesRepository> { SupabaseMessagesRepository(get(), get()) }
