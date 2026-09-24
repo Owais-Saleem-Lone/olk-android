@@ -19,13 +19,31 @@ data class AuthUiState(
     val error: String? = null,
     val notice: String? = null,
 ) {
+    /**
+     * Only a NEW password is held to [PasswordRules]: Supabase checks the rule when a
+     * password is set, never at sign-in, so members with older, shorter passwords
+     * must still be able to sign in.
+     */
     val canSubmit: Boolean
-        get() = !isSubmitting && email.contains('@') && password.length >= MIN_PASSWORD_LENGTH
+        get() = !isSubmitting && email.contains('@') && when (mode) {
+            AuthMode.SIGN_IN -> password.isNotEmpty()
+            AuthMode.SIGN_UP -> PasswordRules.isAcceptable(password)
+        }
+}
 
-    companion object {
-        /** Matches the minimum Supabase Auth enforces server-side. */
-        const val MIN_PASSWORD_LENGTH = 6
-    }
+/**
+ * The rule Supabase Auth enforces when a password is set (web F5, 2026-09-24):
+ * production's dashboard and the web repo's config.toml both say at least 8
+ * characters with letters and digits. Only A-Z/a-z count as letters there.
+ */
+object PasswordRules {
+    const val MIN_LENGTH = 8
+    const val HINT = "At least 8 characters, with a letter and a number"
+
+    fun isAcceptable(password: String): Boolean =
+        password.length >= MIN_LENGTH &&
+            password.any { it in 'a'..'z' || it in 'A'..'Z' } &&
+            password.any { it in '0'..'9' }
 }
 
 class AuthViewModel(
@@ -93,6 +111,9 @@ private fun Throwable.toUserMessage(): String {
         "invalid login credentials" in raw -> "That email and password do not match."
         "email not confirmed" in raw -> "Confirm your email address first — check your inbox."
         "user already registered" in raw -> "That email already has an account. Try signing in."
+        // Supabase's weak_password message lists the whole alphabet; say it plainly.
+        "weak_password" in raw || "password should" in raw ->
+            "Choose a stronger password: ${PasswordRules.HINT.lowercase()}."
         "rate limit" in raw || "too many" in raw -> "Too many attempts. Wait a minute and try again."
         "network" in raw || "unable to resolve host" in raw || "timeout" in raw ->
             "No connection. Check your network and try again."

@@ -97,6 +97,11 @@ fun AuthScreen(
                 value = state.password,
                 onValueChange = viewModel::onPasswordChange,
                 label = { Text("Password") },
+                supportingText = if (state.mode == AuthMode.SIGN_UP) {
+                    { Text(PasswordRules.HINT) }
+                } else {
+                    null
+                },
                 singleLine = true,
                 enabled = !state.isSubmitting,
                 visualTransformation = PasswordVisualTransformation(),
