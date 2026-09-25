@@ -13,6 +13,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -121,6 +122,16 @@ fun AuthScreen(
                     .padding(top = 12.dp),
             )
 
+            if (state.mode == AuthMode.SIGN_IN) {
+                TextButton(
+                    onClick = viewModel::openPasswordReset,
+                    enabled = !state.isSubmitting,
+                    modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+                ) {
+                    Text("Forgot password?", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+                }
+            }
+
             if (state.mode == AuthMode.SIGN_UP) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -184,4 +195,54 @@ fun AuthScreen(
             PrivacyPolicyLink()
         }
     }
+
+    state.reset?.let { reset ->
+        PasswordResetDialog(
+            reset = reset,
+            onEmailChange = viewModel::onResetEmailChange,
+            onSend = viewModel::sendPasswordReset,
+            onDismiss = viewModel::closePasswordReset,
+        )
+    }
+}
+
+@Composable
+private fun PasswordResetDialog(
+    reset: PasswordResetState,
+    onEmailChange: (String) -> Unit,
+    onSend: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reset your password") },
+        text = {
+            Column {
+                Text(
+                    "We'll email you a link. It opens the OLK website, where you choose a new password.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                OutlinedTextField(
+                    value = reset.email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email") },
+                    singleLine = true,
+                    enabled = !reset.isSending,
+                    isError = reset.error != null,
+                    supportingText = reset.error?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { onSend() }),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onSend, enabled = reset.canSend) {
+                Text(if (reset.isSending) "Sending…" else "Send link")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !reset.isSending) { Text("Cancel") }
+        },
+    )
 }

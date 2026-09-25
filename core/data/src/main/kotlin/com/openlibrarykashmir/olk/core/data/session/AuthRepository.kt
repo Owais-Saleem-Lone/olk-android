@@ -27,8 +27,13 @@ interface AuthRepository {
     suspend fun sendPasswordReset(email: String)
 }
 
+/** Where the reset email's link lands: the website's /reset-password, via its /auth/confirm route. */
+fun passwordResetRedirect(websiteUrl: String): String =
+    "${websiteUrl.trimEnd('/')}/auth/confirm?next=/reset-password"
+
 internal class SupabaseAuthRepository(
     private val client: SupabaseClient,
+    private val websiteUrl: String,
 ) : AuthRepository {
 
     override val authState: Flow<AuthState> =
@@ -66,7 +71,13 @@ internal class SupabaseAuthRepository(
         client.auth.signOut()
     }
 
+    /**
+     * The new password is set on the WEBSITE, from the link in the email. The app has no
+     * screen for it and handles no `olk://` link, so without this the link would lead
+     * nowhere. This is the exact URL the website's own form sends, which production's
+     * redirect allow-list already accepts.
+     */
     override suspend fun sendPasswordReset(email: String) {
-        client.auth.resetPasswordForEmail(email.trim())
+        client.auth.resetPasswordForEmail(email.trim(), redirectUrl = passwordResetRedirect(websiteUrl))
     }
 }

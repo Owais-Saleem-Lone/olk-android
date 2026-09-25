@@ -20,6 +20,8 @@ data class AuthUiState(
     val isSubmitting: Boolean = false,
     val error: String? = null,
     val notice: String? = null,
+    /** The "Forgot password?" dialog; null while it is closed. */
+    val reset: PasswordResetState? = null,
 ) {
     /**
      * Only a NEW password is held to [PasswordRules]: Supabase checks the rule when a
@@ -31,6 +33,14 @@ data class AuthUiState(
             AuthMode.SIGN_IN -> password.isNotEmpty()
             AuthMode.SIGN_UP -> PasswordRules.isAcceptable(password) && ageConfirmed
         }
+}
+
+data class PasswordResetState(
+    val email: String,
+    val isSending: Boolean = false,
+    val error: String? = null,
+) {
+    val canSend: Boolean get() = !isSending && email.contains('@')
 }
 
 /**
@@ -102,6 +112,41 @@ class AuthViewModel(
     }
 
     fun dismissNotice() = _uiState.update { it.copy(notice = null, error = null) }
+
+    /** Starts from whatever is already typed in the sign-in form. */
+    fun openPasswordReset() = _uiState.update { it.copy(reset = PasswordResetState(email = it.email.trim())) }
+
+    fun onResetEmailChange(value: String) = _uiState.update {
+        it.copy(reset = it.reset?.copy(email = value, error = null))
+    }
+
+    fun closePasswordReset() = _uiState.update { if (it.reset?.isSending == true) it else it.copy(reset = null) }
+
+    fun sendPasswordReset() {
+        val reset = _uiState.value.reset ?: return
+        if (!reset.canSend) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(reset = reset.copy(isSending = true, error = null)) }
+            runCatching { authRepository.sendPasswordReset(reset.email) }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            reset = null,
+                            email = reset.email.trim(),
+                            // Worded like the website: it never says whether the address has an account.
+                            notice = "If an account exists for ${reset.email.trim()}, a reset link is on its way. " +
+                                "Open it, choose a new password, then sign in here.",
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(reset = reset.copy(isSending = false, error = throwable.toUserMessage()))
+                    }
+                }
+        }
+    }
 }
 
 /**
@@ -119,6 +164,8 @@ private fun Throwable.toUserMessage(): String {
         "weak_password" in raw || "password should" in raw ->
             "Choose a stronger password: ${PasswordRules.HINT.lowercase()}."
         "rate limit" in raw || "too many" in raw -> "Too many attempts. Wait a minute and try again."
+        // GoTrue's one-email-per-minute rule for reset links.
+        "for security purposes" in raw -> "A link was sent a moment ago. Wait a minute before asking for another."
         "network" in raw || "unable to resolve host" in raw || "timeout" in raw ->
             "No connection. Check your network and try again."
         else -> "Something went wrong. Please try again."

@@ -66,7 +66,7 @@ fun dataModule(supabaseUrl: String, supabaseAnonKey: String, websiteUrl: String)
             supabaseAnonKey = supabaseAnonKey,
         )
     }
-    single<AuthRepository> { SupabaseAuthRepository(get()) }
+    single<AuthRepository> { SupabaseAuthRepository(get(), websiteUrl) }
     single<BookRepository> { SupabaseBookRepository(get()) }
     single<BookDetailRepository> { SupabaseBookDetailRepository(get(), get()) }
     single<BookNotesRepository> { SupabaseBookNotesRepository(get()) }
