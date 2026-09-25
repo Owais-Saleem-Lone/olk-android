@@ -7,6 +7,8 @@ import com.openlibrarykashmir.olk.core.data.model.ClubEvent
 import com.openlibrarykashmir.olk.core.data.model.ClubMember
 import com.openlibrarykashmir.olk.core.data.model.ClubPost
 import com.openlibrarykashmir.olk.core.data.model.MembershipStatus
+import com.openlibrarykashmir.olk.core.data.repository.ClubCloseOutcome
+import com.openlibrarykashmir.olk.core.data.repository.ClubEditOutcome
 import com.openlibrarykashmir.olk.core.data.repository.ClubsRepository
 import com.openlibrarykashmir.olk.core.data.repository.EventsRepository
 import com.openlibrarykashmir.olk.core.data.repository.PostOutcome
@@ -38,9 +40,23 @@ data class ClubDetailUiState(
     val notFound: Boolean = false,
     val error: String? = null,
     val message: String? = null,
+    /** The owner's "Edit details" dialog; null while it is closed. */
+    val edit: ClubEditState? = null,
+    val isClosing: Boolean = false,
+    /** The owner closed the club: the screen leaves, as the website goes back to /clubs. */
+    val closed: Boolean = false,
 ) {
     /** The owner is a member too, but has an approved row only if the club was made normally. */
     val canSeeChat: Boolean get() = isOwner || membership == MembershipStatus.APPROVED
+}
+
+data class ClubEditState(
+    val name: String,
+    val description: String,
+    val isSaving: Boolean = false,
+    val error: String? = null,
+) {
+    val canSave: Boolean get() = !isSaving && name.isNotBlank()
 }
 
 class ClubDetailViewModel(
@@ -171,6 +187,75 @@ class ClubDetailViewModel(
         }
     }
 
+    fun startEdit() {
+        val club = _uiState.value.club ?: return
+        if (!_uiState.value.isOwner) return
+        _uiState.update { it.copy(edit = ClubEditState(name = club.name, description = club.description.orEmpty())) }
+    }
+
+    fun onEditNameChange(value: String) = _uiState.update {
+        it.copy(edit = it.edit?.copy(name = value.take(ClubsRepository.MAX_NAME_LENGTH), error = null))
+    }
+
+    fun onEditDescriptionChange(value: String) = _uiState.update {
+        it.copy(edit = it.edit?.copy(description = value.take(ClubsRepository.MAX_DESCRIPTION_LENGTH), error = null))
+    }
+
+    fun cancelEdit() = _uiState.update { if (it.edit?.isSaving == true) it else it.copy(edit = null) }
+
+    fun saveEdit() {
+        val edit = _uiState.value.edit ?: return
+        if (!edit.canSave) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(edit = edit.copy(isSaving = true, error = null)) }
+            runCatching { clubs.updateDetails(clubId, edit.name, edit.description) }
+                .onSuccess { outcome ->
+                    when (outcome) {
+                        ClubEditOutcome.Saved -> {
+                            _uiState.update { it.copy(edit = null, message = "Club details saved.") }
+                            reloadClub()
+                        }
+                        ClubEditOutcome.Invalid -> _uiState.update {
+                            it.copy(edit = edit.copy(error = "Give the club a name, and keep the text within the limits."))
+                        }
+                        ClubEditOutcome.Gone -> _uiState.update {
+                            it.copy(edit = null, message = "This club can no longer be edited.")
+                        }
+                    }
+                }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    _uiState.update { state -> state.copy(edit = edit.copy(error = "Could not save. Try again.")) }
+                }
+        }
+    }
+
+    fun closeClub() {
+        if (!_uiState.value.isOwner || _uiState.value.isClosing) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isClosing = true) }
+            runCatching { clubs.closeClub(clubId) }
+                .onSuccess { outcome ->
+                    _uiState.update {
+                        it.copy(
+                            isClosing = false,
+                            closed = true,
+                            message = when (outcome) {
+                                ClubCloseOutcome.Closed -> "Your club is closed. Its members have been told."
+                                ClubCloseOutcome.AlreadyClosed -> "This club is already closed."
+                            },
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { state -> state.copy(isClosing = false) }
+                    reportFailure(it, "Could not close the club. Try again.")
+                }
+        }
+    }
+
     private fun load(initial: Boolean) {
         viewModelScope.launch {
             _uiState.update {
@@ -208,8 +293,9 @@ class ClubDetailViewModel(
                     notFound = club == null,
                 )
             }.onSuccess { loaded ->
-                // The draft is kept: a refresh must not throw away what is half-typed.
-                _uiState.update { loaded.copy(draft = it.draft, message = it.message) }
+                // The draft and an open edit are kept: a refresh must not throw away
+                // what is half-typed.
+                _uiState.update { loaded.copy(draft = it.draft, message = it.message, edit = it.edit) }
             }.onFailure { throwable ->
                 if (throwable is CancellationException) throw throwable
                 _uiState.update {

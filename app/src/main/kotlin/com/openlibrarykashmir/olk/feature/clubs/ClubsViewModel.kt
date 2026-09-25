@@ -72,6 +72,12 @@ class ClubsViewModel(
 
     fun refresh() = load()
 
+    /**
+     * On coming back from a club: its name, membership or existence may have changed
+     * there (edited, joined, left, closed). Replaces the list without the spinner.
+     */
+    fun refreshQuietly() = load(showSpinner = false)
+
     fun retry() = load()
 
     fun consumeMessage() = _uiState.update { it.copy(message = null) }
@@ -117,11 +123,11 @@ class ClubsViewModel(
         }
     }
 
-    private fun load() {
+    private fun load(showSpinner: Boolean = true) {
         loadJob?.cancel()
         val state = _uiState.value
         loadJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, isLoadingMore = false, error = null) }
+            _uiState.update { it.copy(isLoading = showSpinner, isLoadingMore = false, error = null) }
             runCatching {
                 clubs.browse(query = state.query, interest = state.interest)
             }.onSuccess { page ->

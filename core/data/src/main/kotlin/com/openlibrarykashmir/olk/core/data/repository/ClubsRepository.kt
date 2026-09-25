@@ -26,6 +26,25 @@ sealed interface PostOutcome {
     data object RateLimited : PostOutcome
 }
 
+/** What an owner's edit of the club's name and description did. */
+sealed interface ClubEditOutcome {
+    data object Saved : ClubEditOutcome
+
+    /** A blank name, or text over the database's limits. */
+    data object Invalid : ClubEditOutcome
+
+    /** Nothing changed: the club was closed meanwhile, or is not the caller's. */
+    data object Gone : ClubEditOutcome
+}
+
+/** What closing a club did (web migration `20260925140934_close_clubs`). */
+sealed interface ClubCloseOutcome {
+    /** Closed; its approved members were notified by the database. */
+    data object Closed : ClubCloseOutcome
+
+    data object AlreadyClosed : ClubCloseOutcome
+}
+
 /**
  * Clubs, their rosters and their chat.
  *
@@ -75,9 +94,22 @@ interface ClubsRepository {
 
     suspend fun rate(clubId: String, userId: String, score: Int, comment: String?)
 
+    /** Owner only (RLS). Only name and description: the rest stays with moderation. */
+    suspend fun updateDetails(clubId: String, name: String, description: String?): ClubEditOutcome
+
+    /**
+     * Owner only. Hides the club, its chat and events from everyone; only an admin can
+     * reopen it. Must go through `close_my_club`: a plain UPDATE of `active` is refused.
+     */
+    suspend fun closeClub(clubId: String): ClubCloseOutcome
+
     companion object {
         const val PAGE_SIZE = 20
         const val CHAT_PAGE_SIZE = 20
+
+        /** `clubs.name` is varchar(200); the description check is 2000, like the website's form. */
+        const val MAX_NAME_LENGTH = 200
+        const val MAX_DESCRIPTION_LENGTH = 2000
 
         /** Same cap as the website's rating textarea and the `ratings_comment_length` check. */
         const val MAX_COMMENT_LENGTH = 1000
@@ -242,6 +274,32 @@ internal class SupabaseClubsRepository(
         }
     }
 
+    override suspend fun updateDetails(clubId: String, name: String, description: String?): ClubEditOutcome =
+        try {
+            // The row is asked back: an UPDATE that RLS filtered out (closed meanwhile,
+            // or not the caller's club) is not an error, it just changes nothing.
+            val changed = client.from("clubs").update(
+                buildJsonObject {
+                    put("name", name.trim())
+                    put("description", description?.trim()?.takeIf { it.isNotEmpty() })
+                },
+            ) {
+                select(Columns.list("id"))
+                filter { eq("id", clubId) }
+            }.decodeList<ClubIdRow>()
+            if (changed.isEmpty()) ClubEditOutcome.Gone else ClubEditOutcome.Saved
+        } catch (e: PostgrestRestException) {
+            clubEditErrorOutcome(e.code) ?: throw e
+        }
+
+    override suspend fun closeClub(clubId: String): ClubCloseOutcome =
+        try {
+            client.postgrest.rpc("close_my_club", buildJsonObject { put("p_club_id", clubId) })
+            ClubCloseOutcome.Closed
+        } catch (e: PostgrestRestException) {
+            clubCloseErrorOutcome("${e.error} ${e.message}") ?: throw e
+        }
+
     internal companion object {
         /**
          * Listed explicitly rather than `*`: latitude and longitude are not
@@ -277,6 +335,14 @@ internal fun browseClubParams(query: String, interest: String?, limit: Int, offs
 internal fun postErrorOutcome(message: String?): PostOutcome? =
     if (message.orEmpty().contains("RATE_LIMIT_EXCEEDED")) PostOutcome.RateLimited else null
 
+/** A blank name (check `clubs_name_not_blank`, 23514) or text over varchar(200) (22001). */
+internal fun clubEditErrorOutcome(code: String?): ClubEditOutcome? =
+    if (code == "23514" || code == "22001") ClubEditOutcome.Invalid else null
+
+/** close_my_club refuses a club that is not open, or not the caller's. */
+internal fun clubCloseErrorOutcome(message: String?): ClubCloseOutcome? =
+    if (message.orEmpty().contains("CLUB_NOT_OPEN")) ClubCloseOutcome.AlreadyClosed else null
+
 /** Anything that is not one of the two known states means "not in this club". */
 internal fun membershipStatusOf(status: String?): MembershipStatus = when (status) {
     "approved" -> MembershipStatus.APPROVED
@@ -286,6 +352,9 @@ internal fun membershipStatusOf(status: String?): MembershipStatus = when (statu
 
 @Serializable
 private data class StatusRow(val status: String)
+
+@Serializable
+private data class ClubIdRow(val id: String)
 
 @Serializable
 private data class MembershipRow(

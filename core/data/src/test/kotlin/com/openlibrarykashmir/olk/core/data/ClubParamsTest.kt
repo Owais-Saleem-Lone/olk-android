@@ -1,7 +1,11 @@
 package com.openlibrarykashmir.olk.core.data
 
 import com.openlibrarykashmir.olk.core.data.model.MembershipStatus
+import com.openlibrarykashmir.olk.core.data.repository.ClubCloseOutcome
+import com.openlibrarykashmir.olk.core.data.repository.ClubEditOutcome
 import com.openlibrarykashmir.olk.core.data.repository.PostOutcome
+import com.openlibrarykashmir.olk.core.data.repository.clubCloseErrorOutcome
+import com.openlibrarykashmir.olk.core.data.repository.clubEditErrorOutcome
 import com.openlibrarykashmir.olk.core.data.repository.browseClubParams
 import com.openlibrarykashmir.olk.core.data.repository.membershipStatusOf
 import com.openlibrarykashmir.olk.core.data.repository.postErrorOutcome
@@ -54,5 +58,22 @@ class ClubParamsTest {
         // Anything else has to surface as a real error rather than a friendly message.
         assertNull(postErrorOutcome("permission denied for table club_posts"))
         assertNull(postErrorOutcome(null))
+    }
+
+    @Test
+    fun `an owner's refused edit is Invalid only for a blank name or text too long`() {
+        assertEquals(ClubEditOutcome.Invalid, clubEditErrorOutcome("23514"))
+        assertEquals(ClubEditOutcome.Invalid, clubEditErrorOutcome("22001"))
+        // Anything else (a suspension's RLS refusal, a network error) is a real error.
+        assertNull(clubEditErrorOutcome("42501"))
+    }
+
+    @Test
+    fun `close_my_club's refusal of a club that is not open is recognised`() {
+        assertEquals(
+            ClubCloseOutcome.AlreadyClosed,
+            clubCloseErrorOutcome("CLUB_NOT_OPEN: only the owner can close an open club"),
+        )
+        assertNull(clubCloseErrorOutcome("permission denied for function close_my_club"))
     }
 }

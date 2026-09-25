@@ -7,6 +7,8 @@ import com.openlibrarykashmir.olk.core.data.model.ClubMember
 import com.openlibrarykashmir.olk.core.data.model.ClubPost
 import com.openlibrarykashmir.olk.core.data.model.ClubRating
 import com.openlibrarykashmir.olk.core.data.model.MembershipStatus
+import com.openlibrarykashmir.olk.core.data.repository.ClubCloseOutcome
+import com.openlibrarykashmir.olk.core.data.repository.ClubEditOutcome
 import com.openlibrarykashmir.olk.core.data.repository.ClubsRepository
 import com.openlibrarykashmir.olk.core.data.repository.PostOutcome
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
@@ -52,7 +54,11 @@ class ClubsViewModelsTest {
         var postOutcome: PostOutcome = PostOutcome.Sent,
         var memberships: Map<String, MembershipStatus> = emptyMap(),
         var failJoin: Throwable? = null,
+        var editOutcome: ClubEditOutcome = ClubEditOutcome.Saved,
+        var closeOutcome: ClubCloseOutcome = ClubCloseOutcome.Closed,
     ) : ClubsRepository {
+        var lastEdit: Pair<String, String?>? = null
+        var closed = 0
         val joined = mutableListOf<String>()
         val left = mutableListOf<String>()
         val approved = mutableListOf<String>()
@@ -96,6 +102,15 @@ class ClubsViewModelsTest {
         override suspend fun myRating(clubId: String, userId: String) = rating
         override suspend fun rate(clubId: String, userId: String, score: Int, comment: String?) {
             lastRating = score to comment
+        }
+        override suspend fun updateDetails(clubId: String, name: String, description: String?): ClubEditOutcome {
+            lastEdit = name to description
+            if (editOutcome == ClubEditOutcome.Saved) detail = detail?.copy(name = name.trim(), description = description)
+            return editOutcome
+        }
+        override suspend fun closeClub(clubId: String): ClubCloseOutcome {
+            closed++
+            return closeOutcome
         }
     }
 
@@ -400,5 +415,91 @@ class ClubsViewModelsTest {
         assertEquals("a", state.club?.id)
         assertTrue(state.events.isEmpty())
         assertNull(state.error)
+    }
+
+    // ── The owner edits or closes the club (web migration 20260925140934) ──
+
+    @Test
+    fun `only the owner can open the edit dialog, starting from the club's details`() = runTest {
+        val notOwner = ClubDetailViewModel("a", FakeClubs(detail = detail("a", creator = "someone-else")), FakeEvents(), FakeAuth("me"))
+        advanceUntilIdle()
+        notOwner.startEdit()
+        assertNull(notOwner.uiState.value.edit)
+
+        val owner = ClubDetailViewModel("a", FakeClubs(detail = detail("a", creator = "me").copy(description = "Old")), FakeEvents(), FakeAuth("me"))
+        advanceUntilIdle()
+        owner.startEdit()
+        assertEquals("Club a", owner.uiState.value.edit?.name)
+        assertEquals("Old", owner.uiState.value.edit?.description)
+    }
+
+    @Test
+    fun `a saved edit closes the dialog and shows the new name`() = runTest {
+        val clubs = FakeClubs(detail = detail("a", creator = "me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
+        advanceUntilIdle()
+        viewModel.startEdit()
+        viewModel.onEditNameChange("Chess by the Lake")
+        viewModel.saveEdit()
+        advanceUntilIdle()
+
+        assertEquals("Chess by the Lake" to "", clubs.lastEdit)
+        assertNull(viewModel.uiState.value.edit)
+        assertEquals("Chess by the Lake", viewModel.uiState.value.club?.name)
+    }
+
+    @Test
+    fun `a blank name cannot be saved, and a refused edit keeps the dialog open`() = runTest {
+        val clubs = FakeClubs(detail = detail("a", creator = "me"), editOutcome = ClubEditOutcome.Invalid)
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
+        advanceUntilIdle()
+        viewModel.startEdit()
+        viewModel.onEditNameChange("   ")
+        assertFalse(viewModel.uiState.value.edit!!.canSave)
+
+        viewModel.onEditNameChange("x".repeat(250))
+        assertEquals(ClubsRepository.MAX_NAME_LENGTH, viewModel.uiState.value.edit!!.name.length)
+        viewModel.saveEdit()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.edit!!.error != null)
+    }
+
+    @Test
+    fun `closing the club says so and marks the screen to leave`() = runTest {
+        val clubs = FakeClubs(detail = detail("a", creator = "me"))
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
+        advanceUntilIdle()
+        viewModel.closeClub()
+        advanceUntilIdle()
+
+        assertEquals(1, clubs.closed)
+        assertTrue(viewModel.uiState.value.closed)
+        assertEquals("Your club is closed. Its members have been told.", viewModel.uiState.value.message)
+    }
+
+    @Test
+    fun `a member who is not the owner cannot close the club`() = runTest {
+        val clubs = FakeClubs(detail = detail("a", creator = "someone-else"), membership = MembershipStatus.APPROVED)
+        val viewModel = ClubDetailViewModel("a", clubs, FakeEvents(), FakeAuth("me"))
+        advanceUntilIdle()
+        viewModel.closeClub()
+        advanceUntilIdle()
+
+        assertEquals(0, clubs.closed)
+        assertFalse(viewModel.uiState.value.closed)
+    }
+
+    @Test
+    fun `coming back to the list replaces it without the spinner, so a closed club is gone`() = runTest {
+        val clubs = FakeClubs(page = listOf(club("a"), club("b")))
+        val viewModel = ClubsViewModel(clubs, FakeAuth("me"))
+        advanceUntilIdle()
+
+        clubs.page = listOf(club("b"))
+        viewModel.refreshQuietly()
+        assertFalse(viewModel.uiState.value.isLoading)
+        advanceUntilIdle()
+
+        assertEquals(listOf("b"), viewModel.uiState.value.clubs.map { it.id })
     }
 }

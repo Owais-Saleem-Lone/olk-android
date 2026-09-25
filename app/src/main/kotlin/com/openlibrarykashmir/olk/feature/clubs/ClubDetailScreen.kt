@@ -15,11 +15,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,6 +56,7 @@ import com.openlibrarykashmir.olk.core.data.model.ClubEvent
 import com.openlibrarykashmir.olk.core.data.model.ClubMember
 import com.openlibrarykashmir.olk.core.data.model.ClubPost
 import com.openlibrarykashmir.olk.core.data.model.MembershipStatus
+import com.openlibrarykashmir.olk.core.data.repository.ClubsRepository
 import com.openlibrarykashmir.olk.feature.events.MembersOnlyLabel
 import com.openlibrarykashmir.olk.feature.events.eventPlace
 import com.openlibrarykashmir.olk.feature.events.eventWhenShort
@@ -76,11 +80,15 @@ fun ClubDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmingLeave by rememberSaveable { mutableStateOf(false) }
+    var confirmingClose by rememberSaveable { mutableStateOf(false) }
+    var ownerMenuOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.message) {
         state.message?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.consumeMessage()
+            // A closed club is gone for everyone: say so, then leave, like the website.
+            if (state.closed) onBack()
         }
     }
 
@@ -93,6 +101,31 @@ fun ClubDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (state.isOwner && state.club != null && !state.closed) {
+                        Box {
+                            IconButton(onClick = { ownerMenuOpen = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = "Club options")
+                            }
+                            DropdownMenu(expanded = ownerMenuOpen, onDismissRequest = { ownerMenuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit details") },
+                                    onClick = {
+                                        ownerMenuOpen = false
+                                        viewModel.startEdit()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Close club", color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        ownerMenuOpen = false
+                                        confirmingClose = true
+                                    },
+                                )
+                            }
+                        }
                     }
                 },
             )
@@ -264,6 +297,85 @@ fun ClubDetailScreen(
             },
         )
     }
+
+    if (confirmingClose) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmingClose = false },
+            title = { Text("Close this club?") },
+            // The website's wording (clubs/[id]/page.tsx).
+            text = {
+                Text(
+                    "The club, its chat and its events disappear for everyone, and its members are told. " +
+                        "Only the admin team can reopen it, and it still counts as your one club.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingClose = false
+                    viewModel.closeClub()
+                }) { Text("Close club", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingClose = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    state.edit?.let { edit ->
+        EditClubDialog(
+            edit = edit,
+            onNameChange = viewModel::onEditNameChange,
+            onDescriptionChange = viewModel::onEditDescriptionChange,
+            onSave = viewModel::saveEdit,
+            onDismiss = viewModel::cancelEdit,
+        )
+    }
+}
+
+@Composable
+private fun EditClubDialog(
+    edit: ClubEditState,
+    onNameChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit club details") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = edit.name,
+                    onValueChange = onNameChange,
+                    label = { Text("Name") },
+                    singleLine = true,
+                    enabled = !edit.isSaving,
+                    supportingText = { Text("${edit.name.length}/${ClubsRepository.MAX_NAME_LENGTH}") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = edit.description,
+                    onValueChange = onDescriptionChange,
+                    label = { Text("Description") },
+                    minLines = 3,
+                    maxLines = 6,
+                    enabled = !edit.isSaving,
+                    supportingText = { Text("${edit.description.length}/${ClubsRepository.MAX_DESCRIPTION_LENGTH}") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                edit.error?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onSave, enabled = edit.canSave) { Text(if (edit.isSaving) "Saving…" else "Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !edit.isSaving) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable

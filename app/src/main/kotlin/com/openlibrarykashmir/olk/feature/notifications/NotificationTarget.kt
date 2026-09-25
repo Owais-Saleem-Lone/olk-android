@@ -16,6 +16,7 @@ val NOTIFICATION_ICONS: Map<String, String> = mapOf(
     "book_returned" to "📗",
     "club_joined" to "🏘️",
     "club_announcement" to "📢",
+    "club_closed" to "🔒",
     "event_created" to "📅",
     "club_request_approved" to "🎉",
     "club_request_rejected" to "ℹ️",

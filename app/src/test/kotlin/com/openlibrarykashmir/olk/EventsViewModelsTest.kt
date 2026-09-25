@@ -9,6 +9,8 @@ import com.openlibrarykashmir.olk.core.data.model.ClubRating
 import com.openlibrarykashmir.olk.core.data.model.Event
 import com.openlibrarykashmir.olk.core.data.model.MembershipStatus
 import com.openlibrarykashmir.olk.core.data.model.VISIBILITY_MEMBERS_ONLY
+import com.openlibrarykashmir.olk.core.data.repository.ClubCloseOutcome
+import com.openlibrarykashmir.olk.core.data.repository.ClubEditOutcome
 import com.openlibrarykashmir.olk.core.data.repository.ClubsRepository
 import com.openlibrarykashmir.olk.core.data.repository.EventsRepository
 import com.openlibrarykashmir.olk.core.data.repository.PostOutcome
@@ -63,6 +65,8 @@ class EventsViewModelsTest {
         override suspend fun sendPost(clubId: String, authorId: String, content: String) = PostOutcome.Sent
         override suspend fun myRating(clubId: String, userId: String): ClubRating? = null
         override suspend fun rate(clubId: String, userId: String, score: Int, comment: String?) = Unit
+        override suspend fun updateDetails(clubId: String, name: String, description: String?) = ClubEditOutcome.Saved
+        override suspend fun closeClub(clubId: String) = ClubCloseOutcome.Closed
     }
 
     private val now = Instant.parse("2026-09-21T12:00:00Z")
