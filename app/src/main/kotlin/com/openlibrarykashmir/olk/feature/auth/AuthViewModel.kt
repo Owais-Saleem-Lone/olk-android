@@ -15,6 +15,8 @@ data class AuthUiState(
     val mode: AuthMode = AuthMode.SIGN_IN,
     val email: String = "",
     val password: String = "",
+    /** "I am 18 or older and have read the privacy policy" — a declaration, like the website's tick box. */
+    val ageConfirmed: Boolean = false,
     val isSubmitting: Boolean = false,
     val error: String? = null,
     val notice: String? = null,
@@ -27,7 +29,7 @@ data class AuthUiState(
     val canSubmit: Boolean
         get() = !isSubmitting && email.contains('@') && when (mode) {
             AuthMode.SIGN_IN -> password.isNotEmpty()
-            AuthMode.SIGN_UP -> PasswordRules.isAcceptable(password)
+            AuthMode.SIGN_UP -> PasswordRules.isAcceptable(password) && ageConfirmed
         }
 }
 
@@ -56,6 +58,8 @@ class AuthViewModel(
     fun onEmailChange(value: String) = _uiState.update { it.copy(email = value, error = null) }
 
     fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, error = null) }
+
+    fun onAgeConfirmedChange(value: Boolean) = _uiState.update { it.copy(ageConfirmed = value) }
 
     fun toggleMode() = _uiState.update {
         it.copy(

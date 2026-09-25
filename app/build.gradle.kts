@@ -26,6 +26,19 @@ fun secret(key: String): String {
     return props.getProperty(key).orEmpty()
 }
 
+/**
+ * The Play upload key. The keystore itself lives OUTSIDE the repo; its path and passwords
+ * come through [secret] like everything else. Until all four are set, release builds stay
+ * unsigned — which is what CI builds, since it has none of them.
+ */
+val uploadKeystore = secret("OLK_UPLOAD_KEYSTORE")
+val uploadSigningReady = listOf(
+    "OLK_UPLOAD_KEYSTORE",
+    "OLK_UPLOAD_KEYSTORE_PASSWORD",
+    "OLK_UPLOAD_KEY_ALIAS",
+    "OLK_UPLOAD_KEY_PASSWORD",
+).all { secret(it).isNotBlank() }
+
 android {
     namespace = "com.openlibrarykashmir.olk"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -46,6 +59,17 @@ android {
         buildConfigField("String", "WEBSITE_URL", "\"${secret("WEBSITE_URL")}\"")
     }
 
+    signingConfigs {
+        if (uploadSigningReady) {
+            create("upload") {
+                storeFile = file(uploadKeystore)
+                storePassword = secret("OLK_UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = secret("OLK_UPLOAD_KEY_ALIAS")
+                keyPassword = secret("OLK_UPLOAD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -58,9 +82,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // Unsigned until a keystore exists. `signingConfigs` gets wired up in the
-            // release-prep step, not on day one — an accidental committed keystore is
-            // far more expensive than an unsigned local build.
+            if (uploadSigningReady) signingConfig = signingConfigs.getByName("upload")
         }
     }
 

@@ -57,9 +57,22 @@ class AuthPasswordRulesTest {
         val vm = AuthViewModel(FakeAuth())
         vm.toggleMode()
         vm.onEmailChange("new@example.com")
+        vm.onAgeConfirmedChange(true)
         vm.onPasswordChange("abc123")
         assertFalse(vm.uiState.value.canSubmit)
         vm.onPasswordChange("abcdefg1")
+        assertTrue(vm.uiState.value.canSubmit)
+    }
+
+    @Test
+    fun `a new account needs the 18-or-older confirmation, signing in does not`() {
+        val vm = AuthViewModel(FakeAuth())
+        vm.onEmailChange("member@example.com")
+        vm.onPasswordChange("abcdefg1")
+        assertTrue(vm.uiState.value.canSubmit)
+        vm.toggleMode()
+        assertFalse(vm.uiState.value.canSubmit)
+        vm.onAgeConfirmedChange(true)
         assertTrue(vm.uiState.value.canSubmit)
     }
 
@@ -75,6 +88,7 @@ class AuthPasswordRulesTest {
         vm.toggleMode()
         vm.onEmailChange("new@example.com")
         vm.onPasswordChange("abcdefg1")
+        vm.onAgeConfirmedChange(true)
         vm.submit()
         advanceUntilIdle()
         assertEquals(
