@@ -19,7 +19,44 @@ data class BookDetail(
     val isOwnBook: Boolean,
     val myRequestStatus: RequestStatus?,
     val isSaved: Boolean,
+    /** Everyone who has owned this book, oldest first (`book_ownership_history`). */
+    val ownershipHistory: List<OwnershipEntry> = emptyList(),
+) {
+    /** The web shows the journey only once the book has changed hands. */
+    val hasChangedHands: Boolean get() = ownershipHistory.size > 1
+}
+
+/** One owner in a book's journey. */
+data class OwnershipEntry(
+    /** Null once that member has deleted their account; the entry itself is kept. */
+    val ownerId: String?,
+    val ownerName: String?,
+    val acquiredVia: AcquiredVia,
+    val acquiredAt: String,
+    /** Null for the current owner. */
+    val relinquishedAt: String?,
 )
+
+/** Mirrors the `acquired_via` CHECK on `book_ownership_history`. */
+@Serializable
+enum class AcquiredVia {
+    @SerialName("listed") LISTED,
+    @SerialName("donation_received") DONATION_RECEIVED,
+}
+
+@Serializable
+internal data class OwnershipRow(
+    @SerialName("owner_id") val ownerId: String? = null,
+    @SerialName("acquired_via") val acquiredVia: AcquiredVia,
+    @SerialName("acquired_at") val acquiredAt: String,
+    @SerialName("relinquished_at") val relinquishedAt: String? = null,
+    @SerialName("profiles") val owner: OwnershipOwner? = null,
+) {
+    fun toEntry() = OwnershipEntry(ownerId, owner?.displayName, acquiredVia, acquiredAt, relinquishedAt)
+}
+
+@Serializable
+internal data class OwnershipOwner(@SerialName("display_name") val displayName: String? = null)
 
 data class OwnerSummary(
     val id: String,

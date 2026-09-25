@@ -73,10 +73,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.openlibrarykashmir.olk.core.data.model.AcquiredVia
 import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookCondition
 import com.openlibrarykashmir.olk.core.data.model.ListingType
 import com.openlibrarykashmir.olk.core.data.model.OwnerSummary
+import com.openlibrarykashmir.olk.core.data.model.OwnershipEntry
 import com.openlibrarykashmir.olk.core.data.model.ReportReason
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import org.koin.androidx.compose.koinViewModel
@@ -386,6 +388,10 @@ private fun DetailBody(
             Spacer(Modifier.height(28.dp))
             OwnerCard(it, onClick = { onOpenProfile(it.id) })
         }
+        if (state.detail.hasChangedHands) {
+            Spacer(Modifier.height(28.dp))
+            Journey(state.detail.ownershipHistory)
+        }
         Spacer(Modifier.height(28.dp))
         notes()
         Spacer(Modifier.height(24.dp))
@@ -570,6 +576,70 @@ internal fun OwnerCard(owner: OwnerSummary, heading: String = "ABOUT THE OWNER",
     }
 }
 
+/** The web's "This Book's Journey": every owner, oldest first, the current one highlighted. */
+@Composable
+private fun Journey(history: List<OwnershipEntry>) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "THIS BOOK'S JOURNEY",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            history.forEachIndexed { i, entry ->
+                val isCurrent = entry.relinquishedAt == null
+                // IntrinsicSize.Min lets the connecting line run the full height of the entry.
+                Row(Modifier.height(IntrinsicSize.Min)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(12.dp)) {
+                        Box(
+                            Modifier
+                                .padding(top = 6.dp)
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isCurrent) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant
+                                    },
+                                ),
+                        )
+                        if (i < history.lastIndex) {
+                            Box(
+                                Modifier
+                                    .padding(top = 4.dp)
+                                    .width(1.dp)
+                                    .weight(1f)
+                                    .background(MaterialTheme.colorScheme.outlineVariant),
+                            )
+                        }
+                    }
+                    Column(
+                        Modifier
+                            .padding(start = 10.dp, bottom = if (i < history.lastIndex) 16.dp else 0.dp),
+                    ) {
+                        Text(
+                            text = "${entry.ownerName?.takeIf { it.isNotBlank() } ?: "A reader"} " +
+                                when (entry.acquiredVia) {
+                                    AcquiredVia.LISTED -> "listed this book"
+                                    AcquiredVia.DONATION_RECEIVED -> "received this book via donation"
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text = "${entry.acquiredAt.formatJourneyDate()} – " +
+                                (entry.relinquishedAt?.formatJourneyDate() ?: "present"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun Stat(value: Int, label: String, modifier: Modifier = Modifier) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
@@ -662,3 +732,11 @@ private val JoinedFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM 
 
 private fun String.formatJoined(): String? =
     runCatching { OffsetDateTime.parse(this).format(JoinedFormat) }.getOrNull()
+
+private val JourneyDateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
+
+/** In the device's own zone, like the web's toLocaleDateString. */
+private fun String.formatJourneyDate(): String =
+    runCatching {
+        OffsetDateTime.parse(this).atZoneSameInstant(java.time.ZoneId.systemDefault()).format(JourneyDateFormat)
+    }.getOrDefault("")

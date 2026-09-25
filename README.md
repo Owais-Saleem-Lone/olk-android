@@ -135,6 +135,7 @@ The next build without those variables points back at your usual project.
 - [x] Public profiles, ratings, reading progress and "Books you're reading" in My Books
 - [x] Community notes on the book page — members who have owned or borrowed a book add,
       edit and delete theirs (up to 500 words); moderators can remove any note
+- [x] A book's journey on the book page — everyone who has owned it, once it has changed hands
 - [x] Clubs — browse, request to join, the owner's approvals, members-only chat, ratings
 - [x] Events — browse, RSVP, the joining link for those going, who's going, add to
       calendar, the organiser's cancel; a club's upcoming events on its page

@@ -3,6 +3,7 @@ package com.openlibrarykashmir.olk.core.data.repository
 import com.openlibrarykashmir.olk.core.data.model.Book
 import com.openlibrarykashmir.olk.core.data.model.BookDetail
 import com.openlibrarykashmir.olk.core.data.model.IdRow
+import com.openlibrarykashmir.olk.core.data.model.OwnershipRow
 import com.openlibrarykashmir.olk.core.data.model.ProgressRow
 import com.openlibrarykashmir.olk.core.data.model.ReportOutcome
 import com.openlibrarykashmir.olk.core.data.model.ReportReason
@@ -13,6 +14,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.buildJsonObject
@@ -67,6 +69,18 @@ internal class SupabaseBookDetailRepository(
                 limit(1)
             }.decodeList<IdRow>().isNotEmpty()
         }
+        // Shown only where the book itself is visible (web migration 20260925164004).
+        val history = async {
+            client.from("book_ownership_history").select(
+                Columns.raw(
+                    "owner_id, acquired_via, acquired_at, relinquished_at, " +
+                        "profiles!book_ownership_history_owner_id_fkey(display_name)",
+                ),
+            ) {
+                filter { eq("book_id", bookId) }
+                order("acquired_at", Order.ASCENDING)
+            }.decodeList<OwnershipRow>().map { it.toEntry() }
+        }
 
         BookDetail(
             book = book,
@@ -75,6 +89,7 @@ internal class SupabaseBookDetailRepository(
             isOwnBook = book.ownerId == viewerId,
             myRequestStatus = activeRequest.await()?.status,
             isSaved = saved.await(),
+            ownershipHistory = history.await(),
         )
     }
 
