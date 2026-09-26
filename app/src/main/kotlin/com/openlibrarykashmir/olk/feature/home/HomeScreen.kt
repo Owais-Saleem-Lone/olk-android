@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -79,6 +80,7 @@ import com.openlibrarykashmir.olk.core.data.repository.BookOfMonth
 import com.openlibrarykashmir.olk.core.data.repository.CommunityStats
 import com.openlibrarykashmir.olk.core.data.repository.HomeBook
 import com.openlibrarykashmir.olk.core.designsystem.theme.OlkPalette
+import com.openlibrarykashmir.olk.ui.OlkLogo
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -94,7 +96,12 @@ fun HomeScreen(
     onStartSharing: () -> Unit,
     onOpenClubs: () -> Unit,
     onOpenEvents: () -> Unit,
-    onJoinTeam: () -> Unit,
+    /** The logo opens its page with the designers' credit, as on the website. */
+    onOpenLogo: () -> Unit,
+    /** Book of the Month's writer credit opens their profile. */
+    onOpenProfile: (String) -> Unit,
+    /** Book of the Month invites members to write the next one. */
+    onContactAdmin: () -> Unit,
     /** Whether an admin has clubs switched on; see `platform_settings`. */
     clubsEnabled: Boolean = true,
     /** Events belong to clubs, so they show only when both are switched on. */
@@ -110,79 +117,104 @@ fun HomeScreen(
     }
     val accents = homeAccents()
 
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text("Open Library Kashmir", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { onSearch("") }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search books")
-                    }
-                    if (clubsEnabled) {
-                        IconButton(onClick = onOpenClubs) {
-                            Icon(Icons.Default.Groups, contentDescription = "Clubs")
-                        }
-                    }
-                    if (clubsEnabled && eventsEnabled) {
-                        IconButton(onClick = onOpenEvents) {
-                            Icon(Icons.Default.Event, contentDescription = "Events")
-                        }
-                    }
-                    actions()
-                },
-            )
-        },
-    ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
-            onRefresh = { viewModel.refresh(userInitiated = true) },
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-        ) {
-            when {
-                state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    state.error?.let { error ->
-                        item { Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-                    }
-                    items(state.feed.announcements, key = { it.id }) { AnnouncementCard(it) }
-                    item { JoinTeamCard(accents, onClick = onJoinTeam) }
-                    item { Hero(accents, onSearch = onSearch, onStartSharing = onStartSharing) }
-                    state.feed.stats?.takeIf { it.totalBooks + it.totalUsers + it.completedExchanges > 0 }?.let { stats ->
-                        item { StatsRow(stats, accents) }
-                    }
-                    state.feed.bookOfMonth?.let { book -> item { BookOfMonthCard(book, accents) } }
-                    item {
-                        RecentlyAdded(
-                            books = state.feed.recentBooks,
-                            accents = accents,
-                            onBookClick = onBookClick,
-                            onSeeAll = { onSearch("") },
-                            onStartSharing = onStartSharing,
-                        )
-                    }
-                    if (state.feed.activity.isNotEmpty()) {
-                        item { SectionHeading("Live activity", "Happening right now", accents) }
-                        items(state.feed.activity, key = { "activity-${it.bookId}" }) { item ->
-                            ActivityRow(item, accents, onClick = { onBookClick(item.bookId) })
-                        }
-                    }
-                    item { HowItWorks(accents) }
-                    item { CallToAction(onStartSharing) }
-                    item {
+    // The website homepage's cream and soft glows, behind everything including the top bar.
+    HomeBackground {
+        Scaffold(
+            modifier = modifier,
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    // Like the website's navbar: the page shows through, a little frosted.
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0f),
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    ),
+                    // Two lines at most beside the logo and five action icons on a phone.
+                    title = {
                         Text(
-                            "Open Library Kashmir (OLK) is an independent, community-run project. It is not affiliated " +
-                                "with, sponsored by, or endorsed by the Internet Archive or its Open Library service.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            "Open Library Kashmir",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
+                    },
+                    navigationIcon = {
+                        OlkLogo(size = 36.dp, onClick = onOpenLogo, modifier = Modifier.padding(start = 12.dp, end = 4.dp))
+                    },
+                    actions = {
+                        IconButton(onClick = { onSearch("") }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search books")
+                        }
+                        if (clubsEnabled) {
+                            IconButton(onClick = onOpenClubs) {
+                                Icon(Icons.Default.Groups, contentDescription = "Clubs")
+                            }
+                        }
+                        if (clubsEnabled && eventsEnabled) {
+                            IconButton(onClick = onOpenEvents) {
+                                Icon(Icons.Default.Event, contentDescription = "Events")
+                            }
+                        }
+                        actions()
+                    },
+                )
+            },
+        ) { innerPadding ->
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.refresh(userInitiated = true) },
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+            ) {
+                when {
+                    state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                    else -> LazyColumn(
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                    ) {
+                        state.error?.let { error ->
+                            item { Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+                        }
+                        items(state.feed.announcements, key = { it.id }) { AnnouncementCard(it) }
+                        item { Hero(accents, onSearch = onSearch, onStartSharing = onStartSharing) }
+                        state.feed.stats?.takeIf { it.totalBooks + it.totalUsers + it.completedExchanges > 0 }?.let { stats ->
+                            item { StatsRow(stats, accents) }
+                        }
+                        // The website's order: highlights beside the hero, then Book of the Month.
+                        if (state.feed.highlights.isNotEmpty()) {
+                            item { HighlightsCard(state.feed.highlights, onBookClick = onBookClick) }
+                        }
+                        state.feed.bookOfMonth?.let { book ->
+                            item { BookOfMonthCard(book, onOpenWriter = onOpenProfile, onContactAdmin = onContactAdmin) }
+                        }
+                        item {
+                            RecentlyAdded(
+                                books = state.feed.recentBooks,
+                                accents = accents,
+                                onBookClick = onBookClick,
+                                onSeeAll = { onSearch("") },
+                                onStartSharing = onStartSharing,
+                            )
+                        }
+                        if (state.feed.activity.isNotEmpty()) {
+                            item { SectionHeading("Live activity", "Happening right now", accents) }
+                            items(state.feed.activity, key = { "activity-${it.bookId}" }) { item ->
+                                ActivityRow(item, accents, onClick = { onBookClick(item.bookId) })
+                            }
+                        }
+                        item { HowItWorks(accents) }
+                        item {
+                            Text(
+                                "Open Library Kashmir (OLK) is an independent, community-run project. It is not affiliated " +
+                                    "with, sponsored by, or endorsed by the Internet Archive or its Open Library service.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -235,36 +267,6 @@ private fun WhiteCard(modifier: Modifier = Modifier, content: @Composable () -> 
 }
 
 /** The homepage's "Join the OLK Team" card, in the same place as on the website. */
-@Composable
-private fun JoinTeamCard(accents: HomeAccents, onClick: () -> Unit) {
-    WhiteCard(modifier = Modifier.clickable(onClick = onClick)) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(accents.tealTint),
-                contentAlignment = Alignment.Center,
-            ) { Text("🤝", fontSize = 20.sp) }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "VOLUNTEER & INTERNSHIP",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text("Join the OLK Team", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Students, teachers & developers — volunteer, intern, or help build OLK.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apply now", tint = accents.teal)
-        }
-    }
-}
-
 @Composable
 private fun AnnouncementCard(announcement: Announcement) {
     val (icon, color) = when (announcement.type) {
@@ -395,36 +397,6 @@ private fun SectionHeading(eyebrow: String, title: String, accents: HomeAccents,
 }
 
 @Composable
-private fun BookOfMonthCard(book: BookOfMonth, accents: HomeAccents) {
-    WhiteCard {
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Cover(book.coverUrl, book.title, Modifier.width(88.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    ("📖 Book of the Month" + (book.monthLabel?.let { " · $it" } ?: "")).uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = accents.amber,
-                    letterSpacing = 1.sp,
-                )
-                Text(book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-                book.author?.let { Text("by $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                book.description?.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 5,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun RecentlyAdded(
     books: List<HomeBook>,
     accents: HomeAccents,
@@ -472,7 +444,7 @@ private fun RecentlyAdded(
 
 /** A 2:3 book cover, or the title on a plain card when there is no image. */
 @Composable
-private fun Cover(url: String?, title: String, modifier: Modifier) {
+internal fun Cover(url: String?, title: String, modifier: Modifier) {
     Box(
         modifier
             .aspectRatio(2f / 3f)
@@ -563,30 +535,3 @@ private fun HowItWorks(accents: HomeAccents) {
     }
 }
 
-@Composable
-private fun CallToAction(onStartSharing: () -> Unit) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(OlkPalette.Teal, OlkPalette.Teal, OlkPalette.Amber400)))
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Ready to share your first book?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
-            Text(
-                "Join readers across Kashmir already sharing knowledge, one book at a time.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = OlkPalette.Teal50,
-                textAlign = TextAlign.Center,
-            )
-            Button(
-                onClick = onStartSharing,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF0F766E)),
-                modifier = Modifier.padding(top = 8.dp),
-            ) { Text("Start Sharing Books →", fontWeight = FontWeight.SemiBold) }
-        }
-    }
-}

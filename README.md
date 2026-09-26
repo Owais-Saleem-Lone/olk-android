@@ -153,6 +153,10 @@ The next build without those variables points back at your usual project.
 - [x] Reporting a member — from the same menu on their profile or in a chat; the OLK team
       sees which chat it came from
 - [x] Terms of use accepted at sign-up, and linked (with the privacy policy) from sign-in and Profile
+- [x] The OLK logo as the launcher icon and splash, on Home and sign-in; tapping it opens the logo page
+      with its designers' credit, as on the website
+- [x] Home in the website's colours (cream with soft glows): Highlights from the library (sliding on their
+      own), Book of the Month with Read More and the member who wrote it
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**

@@ -26,6 +26,9 @@ data class BookOfMonth(
     val description: String? = null,
     @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("month_label") val monthLabel: String? = null,
+    /** The member who wrote it (web migration 20260926122434); null once they delete their account. */
+    @SerialName("written_by") val writtenBy: String? = null,
+    @SerialName("writer_name") val writerName: String? = null,
 )
 
 @Serializable
@@ -61,6 +64,8 @@ data class HomeFeed(
     val announcements: List<Announcement> = emptyList(),
     val stats: CommunityStats? = null,
     val bookOfMonth: BookOfMonth? = null,
+    /** "Highlights from the library": the books an admin featured, oldest feature first. */
+    val highlights: List<HomeBook> = emptyList(),
     val recentBooks: List<HomeBook> = emptyList(),
     val activity: List<ActivityItem> = emptyList(),
 )
@@ -81,16 +86,18 @@ internal class SupabaseHomeRepository(
         val announcements = async { runCatching { announcements() } }
         val stats = async { runCatching { stats() } }
         val bookOfMonth = async { runCatching { bookOfMonth() } }
+        val highlights = async { runCatching { highlights() } }
         val recent = async { runCatching { recentBooks() } }
         val activity = async { runCatching { activity() } }
 
-        val results = listOf(announcements, stats, bookOfMonth, recent, activity).map { it.await() }
+        val results = listOf(announcements, stats, bookOfMonth, highlights, recent, activity).map { it.await() }
         results.firstOrNull { it.isSuccess } ?: throw results.first().exceptionOrNull()!!
 
         HomeFeed(
             announcements = announcements.await().getOrDefault(emptyList()),
             stats = stats.await().getOrNull(),
             bookOfMonth = bookOfMonth.await().getOrNull(),
+            highlights = highlights.await().getOrDefault(emptyList()),
             recentBooks = recent.await().getOrDefault(emptyList()),
             activity = activity.await().getOrDefault(emptyList()),
         )
@@ -110,12 +117,18 @@ internal class SupabaseHomeRepository(
     private suspend fun stats(): CommunityStats? =
         client.postgrest.rpc("get_community_stats").decodeList<CommunityStats>().firstOrNull()
 
+    // Through the database function, as the website does: it adds the writer's
+    // current display name, which members' profiles alone wouldn't show signed out.
     private suspend fun bookOfMonth(): BookOfMonth? =
-        client.from("book_of_month").select(Columns.list("title", "author", "description", "cover_url", "month_label")) {
-            filter { eq("active", true) }
-            order("created_at", Order.DESCENDING)
-            limit(1)
-        }.decodeSingleOrNull()
+        client.postgrest.rpc("get_book_of_month").decodeList<BookOfMonth>().firstOrNull()
+
+    // Same query as the website's CommunityShelf.
+    private suspend fun highlights(): List<HomeBook> =
+        client.from("books").select(Columns.list("id", "title", "author", "listing_type", "cover_url")) {
+            filter { eq("featured", true) }
+            order("featured_at", Order.ASCENDING)
+            limit(HIGHLIGHTS)
+        }.decodeList()
 
     private suspend fun recentBooks(): List<HomeBook> =
         client.from("books").select(Columns.list("id", "title", "author", "listing_type", "status", "cover_url")) {
@@ -154,6 +167,7 @@ internal class SupabaseHomeRepository(
 
     private companion object {
         const val RECENT_BOOKS = 4L
+        const val HIGHLIGHTS = 5L
         const val ACTIVITY_ITEMS = 5L
     }
 }
