@@ -22,3 +22,6 @@ google-services.json
 
 # Kotlin
 .kotlin/
+
+# Personal Play Store release guide: holds passwords, never commit
+docs/PLAY_STORE_RELEASE.md
