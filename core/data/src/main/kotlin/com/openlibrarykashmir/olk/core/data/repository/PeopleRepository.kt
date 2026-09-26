@@ -8,10 +8,13 @@ import com.openlibrarykashmir.olk.core.data.model.ScoreRow
 import com.openlibrarykashmir.olk.core.data.model.StatusRow
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlin.math.roundToInt
 
 /** Another reader's public page, as on the website's `/user/<id>`. */
@@ -65,6 +68,11 @@ internal suspend fun SupabaseClient.ownerSummary(userId: String): OwnerSummary? 
             filter { eq("owner_id", userId) }
         }.decodeList<StatusRow>()
     }
+    // Lent-and-returned plus donated books. Exchanges are private to their two
+    // members, so the database counts them (get_books_shared, same as the website).
+    val shared = async {
+        postgrest.rpc("get_books_shared", buildJsonObject { put("p_user_id", userId) }).decodeAs<Int>()
+    }
     val scores = async {
         from("ratings").select(Columns.list("score")) {
             filter { eq("rated_user_id", userId) }
@@ -82,7 +90,7 @@ internal suspend fun SupabaseClient.ownerSummary(userId: String): OwnerSummary? 
         joinedAt = row.createdAt,
         booksListed = ownerStatuses.size,
         booksAvailable = ownerStatuses.count { it.status == BookStatus.AVAILABLE },
-        booksShared = ownerStatuses.count { it.status == BookStatus.GIVEN },
+        booksShared = shared.await(),
         // One decimal place, matching the web page's rounding.
         ratingAverage = ratingScores.takeIf { it.isNotEmpty() }?.let { (it.average() * 10).roundToInt() / 10.0 },
         ratingCount = ratingScores.size,
