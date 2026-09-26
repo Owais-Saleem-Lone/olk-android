@@ -58,13 +58,20 @@ internal class OpenLibraryIsbnRepository(
         val edition = async { getJson("$baseUrl/isbn/$clean.json") }
         val work = async { doc["key"]?.text()?.let { getJson("$baseUrl$it.json") } }
 
-        val editionYear = edition.await()?.get("publish_date")?.text()?.let { YEAR.find(it)?.value?.toIntOrNull() }
+        val editionRecord = edition.await()
+        val editionYear = editionRecord?.get("publish_date")?.text()?.let { YEAR.find(it)?.value?.toIntOrNull() }
+        // The search result describes the *work*, so its title and cover are often the
+        // original's ("Das Schloß" for an English Castle). The edition record is the
+        // book in the member's hands; search only fills in what it lacks.
+        val editionTitle = editionRecord?.get("title")?.text()?.takeIf { it.isNotBlank() }
+        val editionCover = editionRecord?.get("covers")?.jsonArray.orEmpty()
+            .firstNotNullOfOrNull { it.numberOrNull()?.takeIf { id -> id > 0 } }
         val subjects = doc["subject"]?.jsonArray.orEmpty().mapNotNull { it.text() }
 
         IsbnBook(
-            title = title,
+            title = editionTitle ?: title,
             author = doc["author_name"]?.jsonArray?.firstOrNull()?.text(),
-            coverUrl = doc["cover_i"]?.let { "$coversUrl/b/id/${it.numberOrNull() ?: return@let null}-L.jpg" },
+            coverUrl = (editionCover ?: doc["cover_i"]?.numberOrNull())?.let { "$coversUrl/b/id/$it-L.jpg" },
             genre = guessGenre(subjects),
             publicationYear = editionYear ?: doc["first_publish_year"]?.numberOrNull(),
             description = work.await()?.get("description")?.describedText(),

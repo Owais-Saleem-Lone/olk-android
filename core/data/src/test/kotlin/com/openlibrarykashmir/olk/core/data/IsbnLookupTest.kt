@@ -70,6 +70,22 @@ class IsbnLookupTest {
     }
 
     @Test
+    fun `the edition's own title and cover win over the work's original-language ones`() = runTest {
+        val repo = repository { url ->
+            when {
+                "search.json" in url -> """{"numFound": 1, "docs": [{"title": "Das Schloß", "author_name": ["Franz Kafka"], "cover_i": 111, "key": "/works/OL1W"}]}"""
+                url.endsWith("/isbn/9780805211061.json") -> """{"title": "The Castle", "covers": [-1, 222], "publish_date": "1998"}"""
+                else -> null
+            }
+        }
+
+        val book = repo.lookup("9780805211061")!!
+
+        assertEquals("The Castle", book.title)
+        assertEquals("https://covers.test/b/id/222-L.jpg", book.coverUrl)
+    }
+
+    @Test
     fun `falls back to the first publication year when the edition record is missing`() = runTest {
         val repo = repository { url -> if ("search.json" in url) searchJson else null }
 
