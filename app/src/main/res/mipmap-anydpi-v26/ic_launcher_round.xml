@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The OLK logo (website public/olk-logo.svg, rendered in Chromium) inside the adaptive-icon
+     safe circle, on the website's cream. No monochrome layer: the badge has no one-colour form,
+     so themed-icon launchers show it in colour. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_splash_logo" />
-    <monochrome android:drawable="@drawable/ic_splash_logo" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>

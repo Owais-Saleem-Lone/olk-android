@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openlibrarykashmir.olk.ui.LegalLinks
+import com.openlibrarykashmir.olk.ui.OlkLogo
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -70,6 +71,7 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
+            OlkLogo(size = 96.dp, modifier = Modifier.padding(bottom = 16.dp))
             Text(
                 text = "Open Library Kashmir",
                 style = MaterialTheme.typography.headlineMedium,

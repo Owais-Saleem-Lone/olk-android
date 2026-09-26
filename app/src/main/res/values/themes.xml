@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      Splash theme. The window background is the brand slate so the very first frame
-      is already OLK rather than a white flash, and postSplashScreenTheme hands off to
-      a bare Material theme once Compose takes over the drawing.
+      Splash theme. The window background is the website's cream with the OLK logo, so
+      the very first frame is already OLK rather than a white flash (the logo's inside is
+      transparent and its lettering dark, so it needs the light background), and
+      postSplashScreenTheme hands off to a bare Material theme once Compose takes over.
     -->
     <style name="Theme.Olk.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/brand_slate</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Olk</item>
     </style>
 

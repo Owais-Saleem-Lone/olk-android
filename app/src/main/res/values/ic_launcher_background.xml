@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0F172A</color>
+    <!-- The website's page background, behind the round logo badge. -->
+    <color name="ic_launcher_background">#FBF6EC</color>
 </resources>

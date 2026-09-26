@@ -61,6 +61,7 @@ import com.openlibrarykashmir.olk.feature.profile.ProfileScreen
 import com.openlibrarykashmir.olk.feature.requests.RequestsScreen
 import com.openlibrarykashmir.olk.feature.support.SupportScreen
 import com.openlibrarykashmir.olk.feature.team.JoinTeamScreen
+import com.openlibrarykashmir.olk.feature.logo.LogoScreen
 import com.openlibrarykashmir.olk.ui.Suspension
 import com.openlibrarykashmir.olk.ui.SuspensionBanner
 import kotlinx.serialization.Serializable
@@ -139,6 +140,9 @@ data object SupportRoute
 
 @Serializable
 data object JoinTeamRoute
+
+@Serializable
+data object LogoRoute
 
 @Serializable
 data class EventDetailRoute(val eventId: String)
@@ -306,7 +310,9 @@ fun OlkNavHost(
                     onStartSharing = { navController.navigateToTab(MyBooksRoute) },
                     onOpenClubs = { navController.navigate(ClubsRoute) },
                     onOpenEvents = { navController.navigate(EventsRoute) },
-                    onJoinTeam = { navController.navigate(JoinTeamRoute) },
+                    onOpenLogo = { navController.navigate(LogoRoute) },
+                    onOpenProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
+                    onContactAdmin = { navController.navigate(SupportRoute) },
                     clubsEnabled = featureFlags.clubs,
                     eventsEnabled = featureFlags.events,
                     actions = bell,
@@ -415,6 +421,9 @@ fun OlkNavHost(
             }
             composable<SupportRoute> {
                 SupportScreen(onBack = { navController.popBackStack() })
+            }
+            composable<LogoRoute> {
+                LogoScreen(onBack = { navController.popBackStack() })
             }
             composable<JoinTeamRoute> {
                 JoinTeamScreen(onBack = { navController.popBackStack() })
