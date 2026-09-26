@@ -45,10 +45,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.openlibrarykashmir.olk.core.data.model.ReportReason
 import com.openlibrarykashmir.olk.core.data.repository.BlockOutcome
 import com.openlibrarykashmir.olk.core.data.repository.BlockedMember
 import com.openlibrarykashmir.olk.core.data.repository.BlocksRepository
 import com.openlibrarykashmir.olk.core.data.session.AuthRepository
+import com.openlibrarykashmir.olk.ui.ReportDialog
+import com.openlibrarykashmir.olk.ui.message
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,6 +74,8 @@ data class BlockUiState(
     val available: Boolean = false,
     val blocked: Boolean = false,
     val busy: Boolean = false,
+    val isReportOpen: Boolean = false,
+    val isReporting: Boolean = false,
 )
 
 sealed interface BlockEvent {
@@ -123,6 +128,28 @@ class BlockViewModel(
         }
     }
 
+    fun openReport() = _uiState.update { it.copy(isReportOpen = true) }
+
+    fun dismissReport() = _uiState.update { if (it.isReporting) it else it.copy(isReportOpen = false) }
+
+    /** [context] says where the report came from (e.g. which chat), for the OLK team. */
+    fun report(reason: ReportReason, details: String, context: String?) {
+        val me = auth.currentUserId() ?: return
+        if (_uiState.value.isReporting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isReporting = true) }
+            runCatching { blocks.reportMember(me, userId, reason, details, context) }
+                .onSuccess { outcome ->
+                    _uiState.update { it.copy(isReporting = false, isReportOpen = false) }
+                    _events.send(BlockEvent.Message(outcome.message("this member")))
+                }
+                .onFailure {
+                    _uiState.update { it.copy(isReporting = false) }
+                    _events.send(BlockEvent.Message("The report couldn't be sent. Please try again."))
+                }
+        }
+    }
+
     fun unblock() {
         if (_uiState.value.busy) return
         viewModelScope.launch {
@@ -140,14 +167,20 @@ class BlockViewModel(
 }
 
 /**
- * A top-bar overflow menu with Block / Unblock for [userId], and the confirm
- * dialog. Shows nothing on your own profile or before the check has answered.
+ * A top-bar overflow menu with Report member and Block / Unblock for [userId],
+ * and their dialogs. Shows nothing on your own profile or before the check has
+ * answered. Google Play asks for both reporting and blocking of members.
+ *
+ * @param memberName shown in the report dialog.
+ * @param reportContext where a report from here came from (e.g. which chat).
  */
 @Composable
 fun BlockMenu(
     userId: String,
     onMessage: suspend (String) -> Unit,
     onChanged: () -> Unit = {},
+    memberName: String? = null,
+    reportContext: String? = null,
     viewModel: BlockViewModel = koinViewModel(key = "block-$userId") { parametersOf(userId) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -171,6 +204,13 @@ fun BlockMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
+                text = { Text("Report member") },
+                onClick = {
+                    expanded = false
+                    viewModel.openReport()
+                },
+            )
+            DropdownMenuItem(
                 text = { Text(if (state.blocked) "Unblock member" else "Block member") },
                 enabled = !state.busy,
                 onClick = {
@@ -179,6 +219,16 @@ fun BlockMenu(
                 },
             )
         }
+    }
+
+    if (state.isReportOpen) {
+        ReportDialog(
+            subject = memberName?.takeIf { it.isNotBlank() } ?: "This member",
+            title = "Report this member",
+            isSending = state.isReporting,
+            onDismiss = viewModel::dismissReport,
+            onSend = { reason, details -> viewModel.report(reason, details, reportContext) },
+        )
     }
 
     if (confirming) {

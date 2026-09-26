@@ -37,7 +37,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.openlibrarykashmir.olk.ui.PrivacyPolicyLink
+import com.openlibrarykashmir.olk.ui.LegalLinks
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -149,7 +149,7 @@ fun AuthScreen(
                     // The row handles the tap, so the box itself takes no click of its own.
                     Checkbox(checked = state.ageConfirmed, onCheckedChange = null, enabled = !state.isSubmitting)
                     Text(
-                        text = "I am 18 or older and have read the privacy policy",
+                        text = "I am 18 or older and accept the terms of use and the privacy policy",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(start = 12.dp),
                     )
@@ -192,7 +192,7 @@ fun AuthScreen(
                 )
             }
 
-            PrivacyPolicyLink()
+            LegalLinks()
         }
     }
 

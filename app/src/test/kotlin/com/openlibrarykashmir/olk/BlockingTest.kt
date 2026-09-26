@@ -1,6 +1,8 @@
 package com.openlibrarykashmir.olk
 
 import app.cash.turbine.test
+import com.openlibrarykashmir.olk.core.data.model.ReportOutcome
+import com.openlibrarykashmir.olk.core.data.model.ReportReason
 import com.openlibrarykashmir.olk.core.data.repository.BlockOutcome
 import com.openlibrarykashmir.olk.core.data.repository.BlockedMember
 import com.openlibrarykashmir.olk.core.data.repository.BlocksRepository
@@ -45,6 +47,19 @@ class BlockingTest {
         }
         override suspend fun unblock(userId: String) = blockedIds.remove(userId)
         override suspend fun blocked() = blockedIds.map { BlockedMember(it, "Name $it") }
+
+        var reportOutcome: ReportOutcome = ReportOutcome.Sent
+        val reports = mutableListOf<List<Any?>>()
+        override suspend fun reportMember(
+            myId: String,
+            userId: String,
+            reason: ReportReason,
+            details: String?,
+            context: String?,
+        ): ReportOutcome {
+            reports += listOf(myId, userId, reason, details, context)
+            return reportOutcome
+        }
     }
 
     @Test
@@ -106,5 +121,39 @@ class BlockingTest {
         vm.unblock(member)
         advanceUntilIdle()
         assertEquals(listOf("b"), (vm.uiState.value as BlockedMembersUiState.Content).members.map { it.userId })
+    }
+
+    @Test
+    fun `reporting a member sends where it came from, closes the dialog and thanks them`() = runTest {
+        val blocks = FakeBlocks()
+        val vm = BlockViewModel("them", blocks, FakeAuth())
+        advanceUntilIdle()
+        vm.openReport()
+        assertTrue(vm.uiState.value.isReportOpen)
+
+        vm.events.test {
+            vm.report(ReportReason.HARASSMENT, "Rude", "Reported from the chat about \"X\" (request r1).")
+            advanceUntilIdle()
+            assertEquals(BlockEvent.Message("Thanks. The OLK team will review your report."), awaitItem())
+        }
+        assertFalse(vm.uiState.value.isReportOpen)
+        assertEquals(
+            listOf(listOf("me", "them", ReportReason.HARASSMENT, "Rude", "Reported from the chat about \"X\" (request r1).")),
+            blocks.reports,
+        )
+    }
+
+    @Test
+    fun `an open report on the same member is explained`() = runTest {
+        val vm = BlockViewModel("them", FakeBlocks().apply { reportOutcome = ReportOutcome.AlreadyReported }, FakeAuth())
+        advanceUntilIdle()
+        vm.events.test {
+            vm.report(ReportReason.OTHER, "", null)
+            advanceUntilIdle()
+            assertEquals(
+                BlockEvent.Message("You've already reported this member, and it's waiting for review."),
+                awaitItem(),
+            )
+        }
     }
 }

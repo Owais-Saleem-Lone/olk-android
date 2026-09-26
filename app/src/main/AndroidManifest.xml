@@ -28,7 +28,6 @@
       not before — asking for notifications on first launch, before the user knows
       what the app is, is the fastest way to get permanently denied.
     -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".OlkApplication"

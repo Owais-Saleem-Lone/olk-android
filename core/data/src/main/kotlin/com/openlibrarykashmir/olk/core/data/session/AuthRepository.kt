@@ -6,6 +6,9 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.openlibrarykashmir.olk.core.data.model.TERMS_VERSION
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /** Who, if anyone, is signed in. */
 sealed interface AuthState {
@@ -64,6 +67,8 @@ internal class SupabaseAuthRepository(
         client.auth.signUpWith(Email) {
             this.email = email.trim()
             this.password = password
+            // Which Terms of use this member accepted, as the website records it.
+            data = buildJsonObject { put("terms_accepted", TERMS_VERSION) }
         }
     }
 

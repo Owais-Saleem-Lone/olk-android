@@ -111,8 +111,16 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    ready?.info?.otherParty?.id?.let { otherId ->
-                        BlockMenu(otherId, onMessage = { snackbarHostState.showSnackbar(it) })
+                    ready?.info?.let { info ->
+                        info.otherParty?.let { other ->
+                            BlockMenu(
+                                other.id,
+                                onMessage = { snackbarHostState.showSnackbar(it) },
+                                memberName = other.displayName,
+                                // Same wording as the website, so the team sees where it came from.
+                                reportContext = "Reported from the chat about \"${info.bookTitle}\" (request ${info.requestId}).",
+                            )
+                        }
                     }
                 },
             )

@@ -80,10 +80,11 @@ class BookDetailReportTest {
     private fun content(vm: BookDetailViewModel) = vm.uiState.value as BookDetailUiState.Content
 
     @Test
-    fun `reasons are exactly the five the database accepts`() {
+    fun `reasons are exactly the six the database accepts`() {
+        // reports_reason_valid; "Harassment or threats" since web migration 20260926085813.
         assertEquals(
             listOf(
-                "Inappropriate content", "Spam or fake listing", "Offensive language",
+                "Harassment or threats", "Inappropriate content", "Spam or fake listing", "Offensive language",
                 "Suspicious activity", "Other",
             ),
             ReportReason.entries.map { it.label },

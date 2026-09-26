@@ -150,6 +150,9 @@ The next build without those variables points back at your usual project.
 - [x] Blocking a member — from their profile or a chat; cuts contact both ways (books, requests,
       messages, club joins), hides their posts and notes from you, and they are never told.
       Reporting a book is in the book page's menu
+- [x] Reporting a member — from the same menu on their profile or in a chat; the OLK team
+      sees which chat it came from
+- [x] Terms of use accepted at sign-up, and linked (with the privacy policy) from sign-in and Profile
 - [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
 
 **Known gaps to close before v1 ships**

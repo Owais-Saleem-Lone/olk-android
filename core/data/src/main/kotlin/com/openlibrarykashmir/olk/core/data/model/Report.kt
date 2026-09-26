@@ -6,6 +6,8 @@ package com.openlibrarykashmir.olk.core.data.model
  * `20260922174737`), the same list as the website's report modal.
  */
 enum class ReportReason(val label: String) {
+    /** Added with reporting members directly (web migration 20260926085813). */
+    HARASSMENT("Harassment or threats"),
     INAPPROPRIATE("Inappropriate content"),
     SPAM("Spam or fake listing"),
     OFFENSIVE("Offensive language"),
@@ -22,7 +24,7 @@ enum class ReportReason(val label: String) {
 sealed interface ReportOutcome {
     data object Sent : ReportOutcome
 
-    /** One open report per member per book: this one is still waiting for review. */
+    /** One open report per book, or per member, from each reporter: this one is still waiting for review. */
     data object AlreadyReported : ReportOutcome
 
     data object DailyLimitReached : ReportOutcome

@@ -1,5 +1,7 @@
 package com.openlibrarykashmir.olk.core.data.repository
 
+import com.openlibrarykashmir.olk.core.data.model.ReportOutcome
+import com.openlibrarykashmir.olk.core.data.model.ReportReason
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.from
@@ -37,6 +39,18 @@ interface BlocksRepository {
 
     /** The members the signed-in member has blocked, most recent first. */
     suspend fun blocked(): List<BlockedMember>
+
+    /**
+     * Reports a member (not one of their books), from their profile or a chat.
+     * [context] says where it came from, e.g. which chat, and is kept with the details.
+     */
+    suspend fun reportMember(
+        myId: String,
+        userId: String,
+        reason: ReportReason,
+        details: String?,
+        context: String? = null,
+    ): ReportOutcome
 }
 
 internal class SupabaseBlocksRepository(private val client: SupabaseClient) : BlocksRepository {
@@ -73,9 +87,42 @@ internal class SupabaseBlocksRepository(private val client: SupabaseClient) : Bl
             order("created_at", Order.DESCENDING)
         }.decodeList<BlockRow>().map { BlockedMember(it.blockedId, it.profile?.displayName) }
 
+    override suspend fun reportMember(
+        myId: String,
+        userId: String,
+        reason: ReportReason,
+        details: String?,
+        context: String?,
+    ): ReportOutcome =
+        try {
+            client.from("reports").insert(
+                buildJsonObject {
+                    put("reporter_id", myId)
+                    put("reported_user_id", userId)
+                    put("reason", reason.label)
+                    put(
+                        "details",
+                        listOfNotNull(context, details?.trim()?.takeIf { it.isNotEmpty() })
+                            .joinToString("\n").take(ReportReason.DETAILS_MAX).ifEmpty { null },
+                    )
+                },
+            )
+            ReportOutcome.Sent
+        } catch (e: PostgrestRestException) {
+            reportErrorOutcome(e.code, e.message)
+                ?: if (e.code == "42501" && client.refusedBecauseSuspended()) ReportOutcome.Suspended else throw e
+        }
+
     private companion object {
         const val TABLE = "user_blocks"
     }
+}
+
+/** The report refusals a member can act on; null for anything else. */
+internal fun reportErrorOutcome(code: String?, message: String?): ReportOutcome? = when {
+    code == "23505" -> ReportOutcome.AlreadyReported
+    message.orEmpty().contains("RATE_LIMIT_EXCEEDED") -> ReportOutcome.DailyLimitReached
+    else -> null
 }
 
 /** A repeat block is already done; the cap is the only refusal a member can act on. */

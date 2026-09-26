@@ -54,7 +54,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.openlibrarykashmir.olk.ui.PrivacyPolicyLink
+import com.openlibrarykashmir.olk.ui.LegalLinks
 import com.openlibrarykashmir.olk.ui.Suspension
 import com.openlibrarykashmir.olk.core.data.repository.DeletionBlocker
 import com.openlibrarykashmir.olk.core.data.repository.ProfileRepository
@@ -288,7 +288,7 @@ private fun ProfileFields(
 
         DeleteAccountSection(blockers = state.deletionBlockers, onDelete = onDeleteAccount)
 
-        PrivacyPolicyLink(modifier = Modifier.align(Alignment.CenterHorizontally))
+        LegalLinks(modifier = Modifier.align(Alignment.CenterHorizontally))
     }
 }
 

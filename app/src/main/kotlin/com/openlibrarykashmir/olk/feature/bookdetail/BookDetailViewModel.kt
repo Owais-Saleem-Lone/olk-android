@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openlibrarykashmir.olk.core.data.model.BookDetail
 import com.openlibrarykashmir.olk.core.data.model.BookStatus
-import com.openlibrarykashmir.olk.core.data.model.ReportOutcome
 import com.openlibrarykashmir.olk.core.data.model.ReportReason
+import com.openlibrarykashmir.olk.ui.message
 import com.openlibrarykashmir.olk.core.data.model.RequestOutcome
 import com.openlibrarykashmir.olk.core.data.model.RequestStatus
 import com.openlibrarykashmir.olk.core.data.repository.BookDetailRepository
@@ -158,17 +158,7 @@ class BookDetailViewModel(
                     // Every answer but a failure closes the dialog: there is
                     // nothing more the member can do with it.
                     updateContent { it.copy(isReporting = false, isReportOpen = false) }
-                    _messages.send(
-                        when (outcome) {
-                            ReportOutcome.Sent -> "Thanks. The OLK team will review your report."
-                            ReportOutcome.AlreadyReported ->
-                                "You've already reported this book, and it's waiting for review."
-                            ReportOutcome.DailyLimitReached ->
-                                "You've sent a lot of reports today. Please try again tomorrow."
-                            ReportOutcome.Suspended ->
-                                "Your account is suspended, so you can't send reports until it ends."
-                        },
-                    )
+                    _messages.send(outcome.message("this book"))
                 }
                 .onFailure {
                     updateContent { it.copy(isReporting = false) }

@@ -119,7 +119,12 @@ fun UserProfileScreen(
                 },
                 actions = {
                     // A block hides their books from you, so the list reloads.
-                    BlockMenu(userId, onMessage = { snackbarHostState.showSnackbar(it) }, onChanged = viewModel::load)
+                    BlockMenu(
+                        userId,
+                        onMessage = { snackbarHostState.showSnackbar(it) },
+                        onChanged = viewModel::load,
+                        memberName = (state as? UserProfileUiState.Content)?.profile?.person?.displayName,
+                    )
                 },
             )
         },
