@@ -13,6 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,7 +31,11 @@ import androidx.compose.ui.unit.dp
 import com.openlibrarykashmir.olk.BuildConfig
 import com.openlibrarykashmir.olk.ui.OlkLogo
 
-/** The website's /logo page: the logo large, and who designed it. */
+/**
+ * Opened by tapping the OLK logo: the logo large, who designed it, and for the
+ * curious a way to the website's About page (vision and team), which is kept
+ * there rather than copied into the app.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogoScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
@@ -58,6 +63,9 @@ fun LogoScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             OlkLogo(size = 280.dp)
+            OutlinedButton(onClick = { runCatching { uriHandler.openUri(ABOUT_URL) } }) {
+                Text("Our vision and team")
+            }
             Text(
                 text = buildAnnotatedString {
                     append("Logo designed by ")
@@ -76,3 +84,6 @@ fun LogoScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** The website's About page: vision, what the platform is for, and the team. */
+private val ABOUT_URL = "${BuildConfig.WEBSITE_URL}/about"

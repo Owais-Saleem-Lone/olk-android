@@ -27,7 +27,7 @@ fun OlkLogo(size: Dp, modifier: Modifier = Modifier, onClick: (() -> Unit)? = nu
     val base = modifier.size(size).clip(CircleShape).background(LogoBackground)
     Image(
         painter = painterResource(R.drawable.olk_logo),
-        contentDescription = if (onClick != null) "OLK logo, about the logo" else "OLK logo",
+        contentDescription = if (onClick != null) "OLK logo, about OLK" else "OLK logo",
         modifier = if (onClick != null) base.clickable(role = Role.Button, onClick = onClick) else base,
     )
 }
