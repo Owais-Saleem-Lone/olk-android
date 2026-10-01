@@ -28,12 +28,19 @@ import kotlinx.serialization.json.put
 data class SupportMessage(
     val id: String,
     @SerialName("conversation_id") val conversationId: String,
-    @SerialName("sender_id") val senderId: String,
+    /** Empty on the admin team's replies: members never learn which account answered. */
+    @SerialName("sender_id") val senderId: String? = null,
     /** Set by the database's rule, never by the sender: only staff can post with it. */
     @SerialName("sender_is_admin") val senderIsAdmin: Boolean,
     val content: String,
     @SerialName("created_at") val createdAt: String,
-)
+    /** The code name an admin answered under, e.g. "Aristotle" (web migration 20261001074110). */
+    @SerialName("sender_code_name") val senderCodeName: String? = null,
+) {
+    /** What a member sees above an admin reply. */
+    val adminLabel: String
+        get() = if (senderCodeName.isNullOrBlank()) "OLK admin team" else "$senderCodeName · OLK admin team"
+}
 
 sealed interface SupportSendOutcome {
     data class Sent(val message: SupportMessage) : SupportSendOutcome
@@ -143,7 +150,7 @@ internal class SupabaseSupportRepository(
     private companion object {
         const val CONVERSATIONS = "admin_conversations"
         const val MESSAGES = "admin_messages"
-        const val MESSAGE_COLUMNS = "id, conversation_id, sender_id, sender_is_admin, content, created_at"
+        const val MESSAGE_COLUMNS = "id, conversation_id, sender_id, sender_is_admin, content, created_at, sender_code_name"
         const val UNIQUE_VIOLATION = "23505"
     }
 }

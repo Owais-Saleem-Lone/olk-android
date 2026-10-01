@@ -104,7 +104,8 @@ fun SupportScreen(
                 is SupportUiState.Ready -> Column(modifier = Modifier.fillMaxSize()) {
                     Text(
                         text = "A private line to the OLK admin team — ask questions, appeal a decision, " +
-                            "or report something that needs attention.",
+                            "or report something that needs attention. Each admin answers under a code " +
+                            "name, such as Aristotle, so you can see who replied before.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -152,7 +153,7 @@ private fun SupportMessageList(state: SupportUiState.Ready, modifier: Modifier =
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         items(state.messages, key = { it.id }) { message ->
-            SupportBubble(message = message, isMine = message.senderId == state.viewerId)
+            SupportBubble(message = message, isMine = message.senderId != null && message.senderId == state.viewerId)
         }
     }
 }
@@ -187,7 +188,7 @@ private fun SupportBubble(message: SupportMessage, isMine: Boolean) {
                 // The badge is safe to trust: the database only lets staff post with it.
                 if (message.senderIsAdmin) {
                     Text(
-                        text = "✓ OLK Admin Team",
+                        text = "✓ ${message.adminLabel}",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(bottom = 2.dp),

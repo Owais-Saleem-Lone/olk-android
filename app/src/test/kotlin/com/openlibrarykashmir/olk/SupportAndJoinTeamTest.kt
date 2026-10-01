@@ -78,6 +78,14 @@ class SupportAndJoinTeamTest {
     // ── Contact Admin ──
 
     @Test
+    fun `an admin reply shows its code name, or just the team when it has none`() {
+        val withName = SupportMessage("m1", "conv", senderId = null, senderIsAdmin = true, content = "hi", createdAt = "2026-10-01T10:00:00+00:00", senderCodeName = "Aristotle")
+        assertEquals("Aristotle · OLK admin team", withName.adminLabel)
+        // Replies sent before code names existed.
+        assertEquals("OLK admin team", withName.copy(senderCodeName = null).adminLabel)
+    }
+
+    @Test
     fun `opening the page finds the thread and shows its history, oldest first`() = runTest {
         val support = FakeSupport(history = listOf(message("a", "me"), message("b", "staff", admin = true, at = "2026-09-21T10:05:00+00:00")))
         val viewModel = SupportViewModel(support, FakeAuth("me"))
