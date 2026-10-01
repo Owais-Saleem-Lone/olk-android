@@ -1,5 +1,7 @@
 package com.openlibrarykashmir.olk.feature.notifications
 
+import com.openlibrarykashmir.olk.BuildConfig
+
 /**
  * Icons per notification type, kept in step with the web's
  * `src/lib/notification-icons.ts`. Types the app does not know about fall back
@@ -21,6 +23,7 @@ val NOTIFICATION_ICONS: Map<String, String> = mapOf(
     "club_request_approved" to "🎉",
     "club_request_rejected" to "ℹ️",
     "admin_message" to "🛟",
+    "support_message" to "📬",
 )
 
 const val FALLBACK_NOTIFICATION_ICON = "🔔"
@@ -100,3 +103,10 @@ fun notificationTarget(
         else -> NotificationTarget.WebsiteOnly
     }
 }
+
+/**
+ * The website address for a notification's `link` (always a site path such
+ * as `/admin/messages/<id>`), for pages the app does not have.
+ */
+fun websiteUrlFor(link: String, websiteUrl: String = BuildConfig.WEBSITE_URL): String =
+    websiteUrl.trimEnd('/') + "/" + link.trim().trimStart('/')

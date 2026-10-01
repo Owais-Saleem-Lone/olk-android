@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,7 @@ fun NotificationsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
@@ -107,10 +110,18 @@ fun NotificationsScreen(
                                 val target = notificationTarget(notification.link, messagingEnabled, clubsEnabled, eventsEnabled)
                                 when (target) {
                                     NotificationTarget.None -> Unit
+                                    // e.g. the admin panel, which is only on the website:
+                                    // offer to open that exact page there.
                                     NotificationTarget.WebsiteOnly -> scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            "That page is on the website for now.",
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "That page is on the website.",
+                                            actionLabel = "Open",
+                                            withDismissAction = true,
                                         )
+                                        val link = notification.link
+                                        if (result == SnackbarResult.ActionPerformed && link != null) {
+                                            runCatching { uriHandler.openUri(websiteUrlFor(link)) }
+                                        }
                                     }
                                     NotificationTarget.MessagingOff -> scope.launch {
                                         snackbarHostState.showSnackbar(

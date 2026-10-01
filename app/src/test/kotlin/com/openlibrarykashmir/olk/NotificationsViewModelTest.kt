@@ -8,6 +8,7 @@ import com.openlibrarykashmir.olk.feature.notifications.NotificationTarget
 import com.openlibrarykashmir.olk.feature.notifications.NotificationsViewModel
 import com.openlibrarykashmir.olk.feature.notifications.badgeLabel
 import com.openlibrarykashmir.olk.feature.notifications.notificationTarget
+import com.openlibrarykashmir.olk.feature.notifications.websiteUrlFor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -229,6 +230,16 @@ class NotificationsViewModelTest {
 
         assertEquals(false, vm.uiState.value.isLoading)
         assertEquals("No connection. Check your network and try again.", vm.uiState.value.error)
+    }
+
+    @Test
+    fun `an admin-team notice opens its page on the website`() {
+        // support_message links into the admin panel, which only the website has.
+        assertEquals(NotificationTarget.WebsiteOnly, notificationTarget("/admin/messages/u1"))
+        assertEquals(
+            "https://www.example.org/admin/messages/u1",
+            websiteUrlFor("/admin/messages/u1", websiteUrl = "https://www.example.org/"),
+        )
     }
 
     @Test
