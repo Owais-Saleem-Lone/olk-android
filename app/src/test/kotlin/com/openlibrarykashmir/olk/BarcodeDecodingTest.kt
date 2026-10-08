@@ -6,7 +6,10 @@ import com.google.zxing.oned.EAN8Writer
 import com.google.zxing.qrcode.QRCodeWriter
 import com.openlibrarykashmir.olk.feature.mybooks.bookBarcodeReader
 import com.openlibrarykashmir.olk.feature.mybooks.decodeLuminance
+import com.openlibrarykashmir.olk.feature.mybooks.isValidIsbn
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -37,6 +40,19 @@ class BarcodeDecodingTest {
     }
 
     @Test
+    fun `reads a barcode lying sideways in the frame, as a phone held upright sees it`() {
+        val isbn = "9780141439518"
+        val (bytes, width, height) = luminanceOf(EAN13Writer().encode(isbn, BarcodeFormat.EAN_13, 380, 160))
+        // The same picture as an upright phone's sensor delivers it: turned a quarter.
+        val sideways = ByteArray(width * height)
+        for (y in 0 until height) {
+            for (x in 0 until width) sideways[(width - 1 - x) * height + y] = bytes[y * width + x]
+        }
+
+        assertEquals(isbn, decodeLuminance(bookBarcodeReader(), sideways, height, height, width))
+    }
+
+    @Test
     fun `reads a short EAN-8 too`() {
         val code = "96385074"
         val (bytes, width, height) = luminanceOf(EAN8Writer().encode(code, BarcodeFormat.EAN_8, 300, 160))
@@ -56,6 +72,16 @@ class BarcodeDecodingTest {
         val bytes = ByteArray(200 * 200) { WHITE }
 
         assertNull(decodeLuminance(bookBarcodeReader(), bytes, 200, 200, 200))
+    }
+
+    @Test
+    fun `a typed ISBN is checked against its own check digit`() {
+        assertTrue(isValidIsbn("9782075155540"))
+        assertTrue(isValidIsbn("9780141439518"))
+        assertTrue(isValidIsbn("080442957X"))
+        // One digit off, and one digit short.
+        assertFalse(isValidIsbn("9782075155541"))
+        assertFalse(isValidIsbn("978207515540"))
     }
 
     private companion object {

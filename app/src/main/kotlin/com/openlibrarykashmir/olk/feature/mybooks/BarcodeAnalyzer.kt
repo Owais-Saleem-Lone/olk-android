@@ -52,8 +52,37 @@ class BarcodeAnalyzer(private val onIsbn: (String) -> Unit) : ImageAnalysis.Anal
 /**
  * Decodes one greyscale frame. Separate from the camera plumbing so it can be
  * tested against a generated barcode without a device.
+ *
+ * A phone's sensor is mounted sideways, so with the phone held upright a barcode
+ * that looks level on screen has its bars running *along* the rows of the frame,
+ * and the decoder only reads across rows. The frame is therefore tried a second
+ * time turned a quarter, which covers both ways of holding phone and book.
  */
 internal fun decodeLuminance(
+    reader: MultiFormatReader,
+    luminance: ByteArray,
+    rowStride: Int,
+    width: Int,
+    height: Int,
+): String? {
+    val usableWidth = minOf(rowStride, width)
+    return decodeRows(reader, luminance, rowStride, usableWidth, height)
+        ?: decodeRows(reader, quarterTurn(luminance, rowStride, usableWidth, height), height, height, usableWidth)
+}
+
+/** The frame turned 90°, packed without row padding: its width is the old height. */
+private fun quarterTurn(luminance: ByteArray, rowStride: Int, width: Int, height: Int): ByteArray {
+    val turned = ByteArray(width * height)
+    for (y in 0 until height) {
+        val row = y * rowStride
+        for (x in 0 until width) {
+            turned[x * height + (height - 1 - y)] = luminance[row + x]
+        }
+    }
+    return turned
+}
+
+private fun decodeRows(
     reader: MultiFormatReader,
     luminance: ByteArray,
     rowStride: Int,
@@ -66,7 +95,7 @@ internal fun decodeLuminance(
         height,
         0,
         0,
-        minOf(rowStride, width),
+        width,
         height,
         false,
     )

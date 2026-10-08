@@ -139,18 +139,32 @@ fun ScanIsbnScreen(
                         textAlign = TextAlign.Center,
                     )
                 }
+                // One wrong or missing digit is the usual reason a lookup finds nothing,
+                // and the number's own check digit catches it before asking.
+                val complete = manualIsbn.length in setOf(ISBN_10, ISBN_13)
+                val mistyped = complete && !isValidIsbn(manualIsbn)
                 OutlinedTextField(
                     value = manualIsbn,
                     onValueChange = { value -> manualIsbn = value.filter { it.isDigit() || it == 'X' || it == 'x' }.take(13) },
                     label = { Text("ISBN") },
                     placeholder = { Text("e.g. 9780141439518") },
                     singleLine = true,
+                    isError = mistyped,
+                    supportingText = {
+                        Text(
+                            if (mistyped) {
+                                "That isn't a valid ISBN. Check each digit against the book."
+                            } else {
+                                "10 or 13 digits, without the hyphens (${manualIsbn.length} typed)"
+                            },
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Button(
                     onClick = { onIsbn(manualIsbn.trim()) },
-                    enabled = manualIsbn.trim().length in setOf(ISBN_10, ISBN_13),
+                    enabled = complete && !mistyped,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Look up") }
                 if (hasCamera && granted) {
@@ -163,6 +177,15 @@ fun ScanIsbnScreen(
 
 private const val ISBN_10 = 10
 private const val ISBN_13 = 13
+
+/** Whether the digits add up to the check digit every ISBN ends in. */
+internal fun isValidIsbn(isbn: String): Boolean = when (isbn.length) {
+    ISBN_13 -> isbn.all(Char::isDigit) &&
+        isbn.mapIndexed { i, c -> c.digitToInt() * if (i % 2 == 0) 1 else 3 }.sum() % 10 == 0
+    ISBN_10 -> isbn.dropLast(1).all(Char::isDigit) && (isbn.last().isDigit() || isbn.last().uppercaseChar() == 'X') &&
+        isbn.mapIndexed { i, c -> (if (c.isDigit()) c.digitToInt() else 10) * (ISBN_10 - i) }.sum() % 11 == 0
+    else -> false
+}
 
 @Composable
 private fun CameraPreview(onIsbn: (String) -> Unit, modifier: Modifier = Modifier) {

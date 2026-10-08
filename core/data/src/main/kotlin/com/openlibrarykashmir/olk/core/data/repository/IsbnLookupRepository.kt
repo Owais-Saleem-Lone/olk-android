@@ -6,6 +6,7 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.io.IOException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -24,7 +25,7 @@ data class IsbnBook(
 )
 
 interface IsbnLookupRepository {
-    /** Null when Open Library has no record, or the lookup fails. */
+    /** Null when Open Library has no record of the book; throws when it cannot be asked. */
     suspend fun lookup(isbn: String): IsbnBook?
 }
 
@@ -37,6 +38,8 @@ interface IsbnLookupRepository {
  * (search only reports the work's *first* publication, which for a classic can be
  * centuries off), and the work record the description. Those two are optional
  * extras, fetched together, and a failure in either still leaves a usable result.
+ * A failure of the search itself is thrown, so the form can tell "not in the
+ * catalogue" apart from "no connection".
  */
 internal class OpenLibraryIsbnRepository(
     private val client: HttpClient,
@@ -48,8 +51,9 @@ internal class OpenLibraryIsbnRepository(
         val clean = isbn.filter { it.isDigit() || it == 'X' || it == 'x' }.uppercase()
         if (clean.length != ISBN_10 && clean.length != ISBN_13) return@coroutineScope null
 
-        val doc = getJson("$baseUrl/search.json?q=isbn:$clean&limit=1&fields=$SEARCH_FIELDS")
-            ?.get("docs")?.jsonArray?.firstOrNull()?.jsonObject
+        val search = client.get("$baseUrl/search.json?q=isbn:$clean&limit=1&fields=$SEARCH_FIELDS")
+        if (!search.isOk()) throw IOException("Open Library answered ${search.status.value}")
+        val doc = (search.body<JsonObject>()["docs"] as? JsonArray)?.firstOrNull() as? JsonObject
             ?: return@coroutineScope null
 
         val title = doc["title"]?.text().orEmpty()

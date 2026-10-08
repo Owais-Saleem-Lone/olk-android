@@ -111,10 +111,16 @@ class IsbnLookupTest {
     }
 
     @Test
-    fun `no match, a malformed number, and a failing search all come back empty`() = runTest {
+    fun `no match and a malformed number come back empty`() = runTest {
         assertNull(repository { """{"numFound": 0, "docs": []}""" }.lookup("9780141439518"))
         assertNull(repository { searchJson }.lookup("12345"))
-        assertNull(repository { null }.lookup("9780141439518"))
+    }
+
+    @Test
+    fun `a search that fails is an error, not a missing book`() = runTest {
+        val failure = runCatching { repository { null }.lookup("9780141439518") }.exceptionOrNull()
+
+        assertTrue(failure is Exception)
     }
 
     @Test
