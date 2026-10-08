@@ -368,6 +368,50 @@ class MyBooksViewModelsTest {
     }
 
     @Test
+    fun `a pasted cover link is saved as it is, with nothing uploaded`() = runTest {
+        val repo = FakeMyBooks()
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD, NO_LOOKUP)
+        advanceUntilIdle()
+
+        viewModel.onFormChange { it.copy(title = "Curfewed Night") }
+        viewModel.onCoverLink(" https://covers.example/night.jpg ")
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertEquals("https://covers.example/night.jpg", repo.added.single().coverUrl)
+    }
+
+    @Test
+    fun `a cover link that is not https stops the save`() = runTest {
+        val repo = FakeMyBooks()
+        val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD, NO_LOOKUP)
+        advanceUntilIdle()
+
+        viewModel.onFormChange { it.copy(title = "Curfewed Night") }
+        viewModel.onCoverLink("http://covers.example/night.jpg")
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertTrue(repo.added.isEmpty())
+        assertTrue(viewModel.uiState.value.showErrors)
+    }
+
+    @Test
+    fun `edit replaces the cover with a pasted link and removes the old file`() = runTest {
+        val withCover = book().copy(coverUrl = "https://covers/existing.webp")
+        val repo = FakeMyBooks(books = listOf(withCover))
+        val viewModel = EditBookViewModel("b1", FakeBooks(withCover), repo, FakeAuth(ME), NO_UPLOAD)
+        advanceUntilIdle()
+
+        viewModel.onFormChange { it.copy(coverLink = "https://covers.example/new.jpg") }
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertEquals("https://covers.example/new.jpg", repo.lastEdit?.coverUrl)
+        assertEquals(listOf("https://covers/existing.webp"), repo.removedCovers)
+    }
+
+    @Test
     fun `add book checks title and year before calling the database`() = runTest {
         val repo = FakeMyBooks()
         val viewModel = AddBookViewModel(repo, FakeAuth(ME), NO_UPLOAD, NO_LOOKUP)

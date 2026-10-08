@@ -166,9 +166,16 @@ private fun EditForm(
         )
 
         CoverPicker(
-            choice = form.cover,
+            choice = CoverLink.preview(form.cover, form.coverLink),
             enabled = enabled,
-            onChoice = { choice -> onFormChange { it.copy(cover = choice) } },
+            // A photo and a link exclude each other: choosing one drops the other.
+            onChoice = { choice -> onFormChange { it.copy(cover = choice, coverLink = "") } },
+        )
+        CoverLinkField(
+            value = form.coverLink,
+            enabled = enabled,
+            showError = state.showErrors,
+            onValueChange = { link -> onFormChange { it.copy(coverLink = link) } },
         )
 
         if (state.book.acquiredViaDonation) {

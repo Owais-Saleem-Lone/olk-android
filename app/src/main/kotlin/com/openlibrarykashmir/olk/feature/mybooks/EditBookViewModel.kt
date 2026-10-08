@@ -28,6 +28,7 @@ data class BookForm(
     val genre: String,
     val lendingDurationMonths: Int,
     val cover: CoverChoice = CoverChoice.Current(null),
+    val coverLink: String = "",
 ) {
     val titleError: String?
         get() = when {
@@ -38,6 +39,8 @@ data class BookForm(
 
     val authorError: String?
         get() = if (author.trim().length > MAX_TEXT_LENGTH) "Author is too long" else null
+
+    val coverLinkError: String? get() = CoverLink.errorFor(coverLink)
 
     companion object {
         /** `books.title` and `books.author` are varchar(500). */
@@ -136,7 +139,7 @@ class EditBookViewModel(
         val state = _uiState.value as? EditBookUiState.Editing ?: return
         if (state.isBusy) return
         val form = state.form
-        if (form.titleError != null || form.authorError != null) {
+        if (form.titleError != null || form.authorError != null || form.coverLinkError != null) {
             updateEditing { it.copy(showErrors = true) }
             return
         }
@@ -146,7 +149,7 @@ class EditBookViewModel(
             val ownerId = state.book.ownerId
             var coverUrl: String? = state.book.coverUrl
             val result = runCatching {
-                coverUrl = form.cover.resolve(ownerId, uploader)
+                coverUrl = CoverLink.resolve(form.cover, form.coverLink, ownerId, uploader)
                 val edit = BookEdit(
                     title = form.title.trim(),
                     author = form.author.trim().ifEmpty { null },

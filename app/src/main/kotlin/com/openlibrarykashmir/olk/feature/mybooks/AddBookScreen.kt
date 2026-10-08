@@ -129,9 +129,15 @@ fun AddBookScreen(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FieldLabel("Cover photo (optional)")
                 CoverPicker(
-                    choice = form.cover,
+                    choice = CoverLink.preview(form.cover, form.coverLink),
                     enabled = enabled,
-                    onChoice = { choice -> viewModel.onFormChange { it.copy(cover = choice) } },
+                    onChoice = viewModel::onCoverChoice,
+                )
+                CoverLinkField(
+                    value = form.coverLink,
+                    enabled = enabled,
+                    showError = state.showErrors,
+                    onValueChange = viewModel::onCoverLink,
                 )
             }
 

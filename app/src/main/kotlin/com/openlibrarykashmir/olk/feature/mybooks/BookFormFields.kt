@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -44,9 +45,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil3.compose.AsyncImage
+import com.openlibrarykashmir.olk.core.data.model.OrganiserRules
 
 /** What the cover will be once the form is saved. */
 sealed interface CoverChoice {
@@ -158,6 +161,45 @@ fun CoverPicker(
             }
         }
     }
+}
+
+/** A pasted cover link, as the website's "or paste a URL": no upload, so no storage used. */
+object CoverLink {
+    /** Longest link the forms take. */
+    const val MAX_CHARS = 2048
+
+    fun errorFor(link: String): String? =
+        if (link.isNotBlank() && !OrganiserRules.isHttpsUrl(link)) "Image links must start with https://" else null
+
+    /** What the picker shows: a usable link previews just like a chosen photo. */
+    fun preview(cover: CoverChoice, link: String): CoverChoice =
+        if (link.isNotBlank() && errorFor(link) == null) CoverChoice.Current(link.trim()) else cover
+
+    /** The link if one was pasted, otherwise whatever the picker holds. */
+    suspend fun resolve(cover: CoverChoice, link: String, ownerId: String, uploader: CoverUploader): String? =
+        link.trim().ifEmpty { null } ?: cover.resolve(ownerId, uploader)
+}
+
+@Composable
+fun CoverLinkField(
+    value: String,
+    enabled: Boolean,
+    showError: Boolean,
+    onValueChange: (String) -> Unit,
+) {
+    val error = CoverLink.errorFor(value)?.takeIf { showError }
+    OutlinedTextField(
+        value = value,
+        onValueChange = { onValueChange(it.take(CoverLink.MAX_CHARS)) },
+        label = { Text("…or paste an image link") },
+        placeholder = { Text("https://…") },
+        singleLine = true,
+        enabled = enabled,
+        isError = error != null,
+        supportingText = { Text(error ?: "A link uses none of your photo allowance.") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -23,6 +23,7 @@ data class NewBookForm(
     val title: String = "",
     val author: String = "",
     val cover: CoverChoice = CoverChoice.Current(null),
+    val coverLink: String = "",
     val genre: String = BookForm.DEFAULT_GENRE,
     val publicationYear: String = "",
     val description: String = "",
@@ -47,7 +48,10 @@ data class NewBookForm(
             if (year == null || year !in MIN_YEAR..MAX_YEAR) "Enter a year between $MIN_YEAR and $MAX_YEAR" else null
         }
 
-    val isValid: Boolean get() = titleError == null && authorError == null && yearError == null
+    val coverLinkError: String? get() = CoverLink.errorFor(coverLink)
+
+    val isValid: Boolean
+        get() = titleError == null && authorError == null && yearError == null && coverLinkError == null
 
     fun toNewBook(coverUrl: String?) = NewBook(
         title = title.trim(),
@@ -101,10 +105,17 @@ class AddBookViewModel(
     fun onFormChange(transform: (NewBookForm) -> NewBookForm) =
         _uiState.update { it.copy(form = transform(it.form)) }
 
+    /** A photo and a link exclude each other: choosing one drops the other. */
+    fun onCoverChoice(choice: CoverChoice) = onFormChange { it.copy(cover = choice, coverLink = "") }
+
+    fun onCoverLink(link: String) = onFormChange {
+        it.copy(coverLink = link, cover = if (link.isBlank()) it.cover else CoverChoice.Current(null))
+    }
+
     /**
      * Fills the form from Open Library. Only empty fields are filled, so a scan
      * after typing never wipes what the user wrote; the cover is only set when
-     * they have not chosen a photo.
+     * they have not chosen a photo or pasted a link.
      */
     fun applyIsbn(isbn: String) {
         if (_uiState.value.isLookingUp) return
@@ -124,7 +135,7 @@ class AddBookViewModel(
                                     genre = if (form.genre == BookForm.DEFAULT_GENRE) found.genre ?: form.genre else form.genre,
                                     publicationYear = form.publicationYear.ifBlank { found.publicationYear?.toString().orEmpty() },
                                     description = form.description.ifBlank { found.description.orEmpty() },
-                                    cover = if (form.cover == CoverChoice.Current(null) && found.coverUrl != null) {
+                                    cover = if (form.cover == CoverChoice.Current(null) && form.coverLink.isBlank() && found.coverUrl != null) {
                                         CoverChoice.Current(found.coverUrl)
                                     } else {
                                         form.cover
@@ -158,7 +169,7 @@ class AddBookViewModel(
             val result = runCatching {
                 // Cover first: a failed upload should not leave a listing without
                 // the photo the user chose.
-                val coverUrl = state.form.cover.resolve(ownerId, uploader)
+                val coverUrl = CoverLink.resolve(state.form.cover, state.form.coverLink, ownerId, uploader)
                 if (state.form.cover is CoverChoice.Picked) uploaded = coverUrl
                 repository.add(ownerId, state.form.toNewBook(coverUrl))
             }
