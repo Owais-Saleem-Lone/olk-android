@@ -1,7 +1,9 @@
 package com.openlibrarykashmir.olk
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
@@ -27,7 +29,12 @@ class MainActivity : ComponentActivity() {
             viewModel.authState.value is AuthState.Loading
         }
 
-        enableEdgeToEdge()
+        // The app is light whatever the phone is set to (see OlkTheme), so the system
+        // bars must be told too, or a phone in dark mode draws white icons on white.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+        )
 
         setContent {
             val authState by viewModel.authState.collectAsStateWithLifecycle()

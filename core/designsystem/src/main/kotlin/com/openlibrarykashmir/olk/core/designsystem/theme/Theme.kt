@@ -1,7 +1,6 @@
 package com.openlibrarykashmir.olk.core.designsystem.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -81,6 +80,10 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
+ * @param darkTheme defaults to `false`, whatever the phone is set to: OLK looks like
+ *   its website, which is light only, and the screens built in the website's cream
+ *   and teal were designed against the light scheme. The dark scheme stays so it can
+ *   become a user setting later.
  * @param dynamicColor opt into Material You wallpaper-derived colour on Android 12+.
  *   Defaults to `false`: OLK's teal is part of its identity, and a book-exchange app
  *   that changes colour with the user's wallpaper reads as generic. Exposed so it can
@@ -88,7 +91,7 @@ private val DarkColors = darkColorScheme(
  */
 @Composable
 fun OlkTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
