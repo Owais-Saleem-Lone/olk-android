@@ -153,24 +153,26 @@ The next build without those variables points back at your usual project.
 - [x] Reporting a member — from the same menu on their profile or in a chat; the OLK team
       sees which chat it came from
 - [x] Terms of use accepted at sign-up, and linked (with the privacy policy) from sign-in and Profile
-- [x] The OLK logo as the launcher icon and splash, on Home and sign-in; tapping it opens the logo page
-      with its designers' credit, as on the website
+- [x] The OLK logo on the splash, on Home and sign-in; tapping it opens the logo page with its
+      designers' credit, as on the website. The launcher icon is the blue library mark with
+      "Books · People · Passion", the same as the Google Play icon
 - [x] Home in the website's colours (cream with soft glows): Highlights from the library (sliding on their
       own), Book of the Month with Read More and the member who wrote it
-- [ ] Push notifications (FCM) — parked; email and in-app notifications cover it for now
-
-**Known gaps to close before v1 ships**
-
-These are places where the web app does something the phone currently cannot:
-
-1. **Push has no backend.** Needs a `device_tokens` table plus something that calls
-   FCM when a notification row is inserted.
 
 **Later**
 
+- Push notifications (FCM) — parked; email and in-app notifications cover it for now.
+  Would need a `device_tokens` table plus something that calls FCM when a notification
+  row is inserted, and a build without Firebase for F-Droid
 - Offline cache (Room) — matters more here than in most apps, given network
   conditions in the region
 - F-Droid release alongside Play
+
+## Releases
+
+OLK is on Google Play as a closed test (version 0.1.0, since October 2026); the public
+release follows once the test is complete. Release bundles are signed with an upload key
+kept outside this repository, and Google Play holds the app signing key (Play App Signing).
 
 ## Contributing
 

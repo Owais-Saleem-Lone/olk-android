@@ -22,13 +22,6 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
 
-    <!--
-      Declared now because minSdk is 26 and FCM lands in v1. On Android 13+ this is a
-      runtime permission the app must ask for; the prompt goes in with the push work,
-      not before — asking for notifications on first launch, before the user knows
-      what the app is, is the fastest way to get permanently denied.
-    -->
-
     <application
         android:name=".OlkApplication"
         android:allowBackup="true"
