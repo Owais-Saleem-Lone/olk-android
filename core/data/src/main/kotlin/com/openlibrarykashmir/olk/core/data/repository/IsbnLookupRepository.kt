@@ -2,8 +2,11 @@ package com.openlibrarykashmir.olk.core.data.repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.io.IOException
@@ -38,6 +41,10 @@ interface IsbnLookupRepository {
  * (search only reports the work's *first* publication, which for a classic can be
  * centuries off), and the work record the description. Those two are optional
  * extras, fetched together, and a failure in either still leaves a usable result.
+ * Every request names this app and a contact address, as Open Library asks of its
+ * API users: identified callers are allowed three requests a second instead of
+ * one, and one lookup is three requests.
+ *
  * A failure of the search itself is thrown, so the form can tell "not in the
  * catalogue" apart from "no connection".
  */
@@ -51,7 +58,7 @@ internal class OpenLibraryIsbnRepository(
         val clean = isbn.filter { it.isDigit() || it == 'X' || it == 'x' }.uppercase()
         if (clean.length != ISBN_10 && clean.length != ISBN_13) return@coroutineScope null
 
-        val search = client.get("$baseUrl/search.json?q=isbn:$clean&limit=1&fields=$SEARCH_FIELDS")
+        val search = client.get("$baseUrl/search.json?q=isbn:$clean&limit=1&fields=$SEARCH_FIELDS") { identify() }
         if (!search.isOk()) throw IOException("Open Library answered ${search.status.value}")
         val doc = (search.body<JsonObject>()["docs"] as? JsonArray)?.firstOrNull() as? JsonObject
             ?: return@coroutineScope null
@@ -83,10 +90,14 @@ internal class OpenLibraryIsbnRepository(
     }
 
     private suspend fun getJson(url: String): JsonObject? = runCatching {
-        client.get(url).takeIf(HttpResponse::isOk)?.body<JsonObject>()
+        client.get(url) { identify() }.takeIf(HttpResponse::isOk)?.body<JsonObject>()
     }.getOrNull()
 
+    private fun HttpRequestBuilder.identify() = header(HttpHeaders.UserAgent, USER_AGENT)
+
     private companion object {
+        /** The format Open Library documents: `AppName (contact)`. The address is the one on /privacy. */
+        const val USER_AGENT = "OLK-Android (https://www.openlibrarykashmir.com; openlibrarykashmir@gmail.com)"
         const val ISBN_10 = 10
         const val ISBN_13 = 13
         const val SEARCH_FIELDS = "title,author_name,cover_i,subject,key,first_publish_year"

@@ -21,8 +21,11 @@ import org.junit.Test
 
 class IsbnLookupTest {
 
+    private val userAgents = mutableListOf<String?>()
+
     private fun repository(handler: (String) -> String?): OpenLibraryIsbnRepository {
         val engine = MockEngine { request ->
+            userAgents += request.headers[HttpHeaders.UserAgent]
             val body = handler(request.url.toString())
             if (body == null) {
                 respondError(HttpStatusCode.NotFound)
@@ -114,6 +117,14 @@ class IsbnLookupTest {
     fun `no match and a malformed number come back empty`() = runTest {
         assertNull(repository { """{"numFound": 0, "docs": []}""" }.lookup("9780141439518"))
         assertNull(repository { searchJson }.lookup("12345"))
+    }
+
+    @Test
+    fun `every request to Open Library says who is asking`() = runTest {
+        repository { searchJson }.lookup("9780141439518")
+
+        assertEquals(3, userAgents.size)
+        assertTrue(userAgents.all { it != null && "OLK" in it && "@" in it })
     }
 
     @Test
