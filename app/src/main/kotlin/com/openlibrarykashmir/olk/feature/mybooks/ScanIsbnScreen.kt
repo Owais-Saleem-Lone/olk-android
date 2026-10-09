@@ -4,9 +4,14 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.util.Size
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
@@ -22,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -75,6 +82,9 @@ fun ScanIsbnScreen(
     var askedOnce by rememberSaveable { mutableStateOf(false) }
     var typing by rememberSaveable { mutableStateOf(false) }
     var manualIsbn by rememberSaveable { mutableStateOf("") }
+    var camera by remember { mutableStateOf<Camera?>(null) }
+    var torchOn by remember { mutableStateOf(false) }
+    val hasTorch = camera?.cameraInfo?.hasFlashUnit() == true
 
     val requestPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
         granted = result
@@ -97,6 +107,21 @@ fun ScanIsbnScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    if (hasTorch && !typing) {
+                        IconButton(
+                            onClick = {
+                                torchOn = !torchOn
+                                camera?.cameraControl?.enableTorch(torchOn)
+                            },
+                        ) {
+                            Icon(
+                                imageVector = if (torchOn) Icons.Default.FlashlightOff else Icons.Default.FlashlightOn,
+                                contentDescription = if (torchOn) "Switch the light off" else "Switch the light on",
+                            )
+                        }
+                    }
+                },
             )
         },
     ) { innerPadding ->
@@ -113,6 +138,10 @@ fun ScanIsbnScreen(
             if (cameraUsable) {
                 CameraPreview(
                     onIsbn = onIsbn,
+                    onCamera = {
+                        camera = it
+                        torchOn = false
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(3f / 4f)
@@ -120,7 +149,8 @@ fun ScanIsbnScreen(
                         .background(Color.Black),
                 )
                 Text(
-                    text = "Point the camera at the barcode on the back of the book.",
+                    text = "Hold the phone about a hand's length from the barcode on the back of the book, " +
+                        "and keep it still. In dim light, switch the light on.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -175,6 +205,8 @@ fun ScanIsbnScreen(
     }
 }
 
+private val ANALYSIS_SIZE = Size(1280, 720)
+private const val SCAN_ZOOM = 2f
 private const val ISBN_10 = 10
 private const val ISBN_13 = 13
 
@@ -188,7 +220,7 @@ internal fun isValidIsbn(isbn: String): Boolean = when (isbn.length) {
 }
 
 @Composable
-private fun CameraPreview(onIsbn: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun CameraPreview(onIsbn: (String) -> Unit, onCamera: (Camera?) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
@@ -207,18 +239,36 @@ private fun CameraPreview(onIsbn: (String) -> Unit, modifier: Modifier = Modifie
             val cameraProvider = provider ?: return@addListener
 
             val preview = Preview.Builder().build().apply { surfaceProvider = previewView.surfaceProvider }
+            // CameraX analyses at 640×480 unless told otherwise, which leaves a book's
+            // barcode about two pixels a bar: readable only when held just right.
             val analysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setResolutionSelector(
+                    ResolutionSelector.Builder()
+                        .setAspectRatioStrategy(AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY)
+                        .setResolutionStrategy(
+                            ResolutionStrategy(ANALYSIS_SIZE, ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+                        )
+                        .build(),
+                )
                 .build()
                 .apply { setAnalyzer(analysisExecutor, analyzer) }
 
             runCatching {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+            }.onSuccess { camera ->
+                // A phone cannot focus on something a few centimetres away, and a small
+                // barcode invites exactly that. Zoomed in, it fills the frame from a
+                // distance the lens can focus at.
+                val maxZoom = camera.cameraInfo.zoomState.value?.maxZoomRatio ?: 1f
+                camera.cameraControl.setZoomRatio(minOf(SCAN_ZOOM, maxZoom))
+                onCamera(camera)
             }
         }, mainExecutor)
 
         onDispose {
+            onCamera(null)
             provider?.unbindAll()
             analysisExecutor.shutdown()
         }
